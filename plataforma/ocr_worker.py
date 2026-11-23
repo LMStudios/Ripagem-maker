@@ -39,8 +39,10 @@ def tiny(rgb):
 
 def frames(args, start, duration=None, rate=RATE):
     duration = args.duracao if duration is None else duration
-    cmd = [args.ffmpeg, '-v', 'error', '-nostdin', '-ss', f'{max(0, start):.3f}', '-i', args.video, '-t', f'{duration:.3f}', '-an',
-           '-vf', f'fps={rate},scale={args.largura}:{args.altura}:flags=area', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']
+    decoder_limits = ['-threads', '1', '-filter_threads', '1'] if sys.platform == 'win32' else []
+    encoder_limits = ['-threads', '1'] if sys.platform == 'win32' else []
+    cmd = [args.ffmpeg, *decoder_limits, '-v', 'error', '-nostdin', '-ss', f'{max(0, start):.3f}', '-i', args.video, '-t', f'{duration:.3f}', '-an',
+           '-vf', f'fps={rate},scale={args.largura}:{args.altura}:flags=area', '-f', 'rawvideo', '-pix_fmt', 'rgb24', *encoder_limits, '-']
     size = args.largura * args.altura * 3
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     try:
@@ -408,6 +410,10 @@ def main():
     ap.add_argument('--aparencia')
     ap.add_argument('--limites')
     a = ap.parse_args()
+    if sys.platform == 'win32':
+        import cv2
+        cv2.setNumThreads(1)
+        a.threads = 1
     folder = Path(a.pasta)
     folder.mkdir(parents=True, exist_ok=True)
     if a.aparencia:

@@ -26,6 +26,11 @@ def label(path, text, color):
 
 
 class PureTests(unittest.TestCase):
+    def test_windows_uses_one_visual_worker(self):
+        from unittest.mock import patch
+        with patch.object(D.sys, 'platform', 'win32'), patch.object(D.os, 'cpu_count', return_value=32):
+            self.assertEqual(D.workers(), 1)
+
     def test_match_tolerates_split_boxes_and_misreads(self):
         score, text, _ = D.match([['GOLDEN', .9, .3, .2], ['NERVES', .9, .4, .2]], ['golden nerves'])
         self.assertGreaterEqual(score, .99)

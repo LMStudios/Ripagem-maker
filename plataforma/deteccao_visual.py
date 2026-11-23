@@ -9,6 +9,7 @@ import math
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 import unicodedata
@@ -171,6 +172,8 @@ def unit_file(directory, start): return directory / f'unidade_{start:09.3f}.json
 
 
 def workers():
+    if sys.platform == 'win32':
+        return 1
     return max(1, min(4, (os.cpu_count() or 2) // 2))
 
 
@@ -185,7 +188,10 @@ def run_workers(job, out, pending, info, directory=None, extra=(), label='Lendo 
     directory.mkdir(parents=True, exist_ok=True)
     width, height = frame_size(info)
     background = getattr(job, 'params', {}).get('automatico', False)
-    count = min(2 if background else workers(), len(pending))
+    if not pending:
+        return
+    count = min(workers(), 2 if background else len(pending), len(pending))
+    threads_per_worker = 1 if background or sys.platform == 'win32' else max(1, (os.cpu_count() or 2) // count)
     groups = [pending[i::count] for i in range(count)]
     total = len(pending)
     done = []
@@ -209,7 +215,7 @@ def run_workers(job, out, pending, info, directory=None, extra=(), label='Lendo 
         for group in groups:
             cmd = [M.PY, str(M.BASE / 'ocr_worker.py'), str(T.source(out)), str(directory), '--ffmpeg', M.FFMPEG,
                    '--unidades', ','.join(f'{u:.3f}' for u in group), '--duracao', str(UNIT_S),
-                   '--largura', str(width), '--altura', str(height), '--threads', str(1 if background else max(1, (os.cpu_count() or 2) // count)), *extra]
+                   '--largura', str(width), '--altura', str(height), '--threads', str(threads_per_worker), *extra]
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace',
                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
             if background and hasattr(os, 'setpriority'):
@@ -481,17 +487,19 @@ def thumbnails(out, items):
     directory = folder(out) / 'miniaturas'
     directory.mkdir(parents=True, exist_ok=True)
     src = str(T.source(out))
+    key = source_key(out)[:8]
+    ffmpeg_limits = ['-threads', '1', '-filter_threads', '1'] if sys.platform == 'win32' else []
     jobs = []
     for item in items:
         a, b = item['inicio_ms'], item['fim_ms']
         files = []
         for t in (min(b - 1, a + 300), (a + b) // 2, max(a, b - 300)):
-            target = directory / f'{source_key(out)[:8]}_{t}.jpg'
+            target = directory / f'{key}_{t}.jpg'
             files.append(str(target.relative_to(out)))
             if not target.exists():
-                jobs.append([M.FFMPEG, '-v', 'error', '-y', '-ss', f'{t / 1000:.3f}', '-i', src, '-frames:v', '1', '-vf', 'scale=-2:160', '-q:v', '5', str(target)])
+                jobs.append([M.FFMPEG, '-v', 'error', '-y', *ffmpeg_limits, '-ss', f'{t / 1000:.3f}', '-i', src, '-frames:v', '1', '-vf', 'scale=-2:160', '-q:v', '5', str(target)])
         item['miniaturas'] = files
-    with ThreadPoolExecutor(4) as pool:
+    with ThreadPoolExecutor(1 if sys.platform == 'win32' else 4) as pool:
         list(pool.map(lambda cmd: subprocess.run(cmd, capture_output=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0)), jobs))
 
 
@@ -584,7 +592,7 @@ def refine_limits(job, out, raws, info, wanted, changes):
         request = directory / f'pedido_{uuid_hex()}.json'
         T.write(request, {'grupos': pending, 'nomes': wanted, 'referencias': refs if any(g['somente_referencia'] or g['caixa'] is None for g in pending) else []})
         command = [M.PY, str(M.BASE / 'ocr_worker.py'), str(T.source(out)), str(directory), '--ffmpeg', M.FFMPEG, '--unidades', '0',
-                   '--largura', str(width), '--altura', str(height), '--threads', '2', '--limites', str(request)]
+                   '--largura', str(width), '--altura', str(height), '--threads', '1' if sys.platform == 'win32' else '2', '--limites', str(request)]
         _run_tracked(job, command, len(pending), 'LIMITE ', 'Ajustando a entrada e a saída das aparições', 'Limites das aparições', (.9, .05))
         request.unlink(missing_ok=True)
     for g in groups:

@@ -167,6 +167,7 @@
             <label class="f">Nome do editor<input name="nome" maxlength="100" required></label>
             <label class="f">E-mail<input name="email" type="email" maxlength="254" required></label>
             <label class="f">Código de editor<input name="codigo" maxlength="32" placeholder="EV08" required></label>
+            <label class="f">Entrega do convite<select name="convite_manual"><option value="sim">Código para compartilhar</option><option value="nao">E-mail automático (SMTP)</option></select></label>
             <button type="submit" class="btn pri">Convidar editor</button>
           </form>
           <p class="equipe-detalhe" data-team-status role="status"></p>
@@ -238,10 +239,15 @@
         status(teamStatus, 'Salvando…');
         section.querySelectorAll('form button, [data-team-list] button').forEach((b) => { b.disabled = true; });
         try {
-          await api('admin', body);
+          const result = await api('admin', body);
           if (body.acao === 'convidar') invite.reset();
-          await loadTeam();
-          status(teamStatus, done);
+          if (result.codigo_ativacao) {
+            status(teamStatus, 'Código de ativação: ' + result.codigo_ativacao + '. Envie só ao editor. Ele informa o código em Ativar convite no aplicativo.');
+            try { await loadTeam(); } catch (error) { /* Preserve o código nesta tela. */ }
+          } else {
+            await loadTeam();
+            status(teamStatus, done);
+          }
         } catch (error) { status(teamStatus, error.message, true); }
         finally {
           pendingAdmin = false;
@@ -362,7 +368,7 @@
       invite.addEventListener('submit', (event) => {
         event.preventDefault();
         const fields = Object.fromEntries(new FormData(invite));
-        adminAction({acao: 'convidar', ...fields}, 'Convite enviado.');
+        adminAction({acao: 'convidar', ...fields, convite_manual: fields.convite_manual === 'sim'}, 'Convite enviado.');
       });
       for (const key of ['editor', 'version', 'from', 'until']) find('[data-report-' + key + ']').addEventListener('change', renderReports);
       find('[data-report-export]').addEventListener('click', exportReports);

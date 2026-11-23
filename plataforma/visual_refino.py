@@ -8,6 +8,7 @@ import math
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -143,7 +144,7 @@ def run(job, out, samples, changes, wanted, start, end, info, match, group, sour
     T.write(request, {'pontos': points, 'nomes': wanted, 'referencias': refs})
     width, height = image_size(info, 1440)
     command = [M.PY, str(M.BASE / 'ocr_worker.py'), str(T.source(out)), str(directory), '--ffmpeg', M.FFMPEG,
-               '--unidades', '0', '--largura', str(width), '--altura', str(height), '--threads', '2', '--refinar', str(request)]
+               '--unidades', '0', '--largura', str(width), '--altura', str(height), '--threads', '1' if sys.platform == 'win32' else '2', '--refinar', str(request)]
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding='utf-8', errors='replace',
                             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if getattr(job,'params',{}).get('automatico') and hasattr(os,'setpriority'):

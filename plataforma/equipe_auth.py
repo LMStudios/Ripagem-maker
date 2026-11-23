@@ -81,13 +81,17 @@ def _configuration():
     url = os.environ.get('RIPAGEM_SUPABASE_URL')
     key = os.environ.get('RIPAGEM_SUPABASE_CHAVE_PUBLICA')
     if url is None and key is None:
-        if not CONFIG.exists():
+        if CONFIG.exists():
+            try:
+                data = json.loads(CONFIG.read_text(encoding='utf-8'))
+                url, key = data.get('url'), data.get('chave_publica')
+            except (OSError, ValueError, AttributeError):
+                url, key = None, None
+        elif platform.system() == 'Windows' and os.environ.get('DRSTUDIO_EMBED') == '1':
+            url = 'https://iayewkfgjgzdceircycr.supabase.co'
+            key = 'sb_publishable_pRplgdc2VEjPrttrSSBIiQ_7vvCWRb0'
+        else:
             return None
-        try:
-            data = json.loads(CONFIG.read_text(encoding='utf-8'))
-            url, key = data.get('url'), data.get('chave_publica')
-        except (OSError, ValueError, AttributeError):
-            url, key = None, None
     url = url.strip().rstrip('/') if isinstance(url, str) else ''
     key = key.strip() if isinstance(key, str) else ''
     try:
@@ -600,7 +604,7 @@ class _Equipe:
             if not profile or profile['funcao'] != 'administrador':
                 raise AuthError('A tela Equipe é exclusiva de administradores.', 403)
             # A função revalida a conta e define os campos que cada operação aceita.
-            payload = {k: v for k, v in (data or {}).items() if k in ('id', 'email', 'nome', 'codigo')}
+            payload = {k: v for k, v in (data or {}).items() if k in ('id', 'email', 'nome', 'codigo', 'convite_manual')}
             try:
                 return _remote(self.config, 'POST', '/functions/v1/equipe-admin',
                                token=self.tokens.access, body=dict(payload, acao=action))

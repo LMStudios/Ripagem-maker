@@ -162,10 +162,15 @@ export function createHandler(conf: Config, request = fetch) {
     if (existing.length) {
       throw new ApiError(409, "Este código de editor já está em uso.");
     }
-    const convite = await call<Usuario | { user: Usuario }>("/auth/v1/invite", {
-      method: "POST",
-      json: { email },
-    });
+    const manual = body.convite_manual === true;
+    const convite = await call<Usuario | { user: Usuario; email_otp?: string }>(
+      manual ? "/auth/v1/admin/generate_link" : "/auth/v1/invite",
+      { method: "POST", json: manual ? { type: "invite", email } : { email } },
+    );
+    const otp = "email_otp" in convite ? convite.email_otp : undefined;
+    if (manual && !/^\d{6}$/.test(otp ?? "")) {
+      throw new ApiError(502, "Não foi possível gerar o código do convite.");
+    }
     const invited = "user" in convite ? convite.user : convite;
     if (typeof invited?.id !== "string" || !uuid.test(invited.id)) {
       throw new ApiError(
@@ -178,7 +183,7 @@ export function createHandler(conf: Config, request = fetch) {
       json: { id: invited.id, nome, codigo, funcao: "editor", ativo: true },
       prefer: "return=representation",
     });
-    return { perfil: merge(perfil, invited) };
+    return { perfil: merge(perfil, invited), ...(manual ? { codigo_ativacao: otp } : {}) };
   }
 
   async function update(body: Payload) {

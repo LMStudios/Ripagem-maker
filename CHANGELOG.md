@@ -1,5 +1,10 @@
 # Notas de versão
 
+## 3.15.5
+
+- Detecção visual no Windows usa um processo de OCR por vez e limita o paralelismo interno da leitura e das miniaturas.
+- Configuração inicial de login no Windows para o projeto da equipe, com convite por código dentro do aplicativo.
+
 ## 3.15.4
 
 - O XML do Premiere declara takes e B-rolls das faixas de sobreposição apenas como vídeo, evitando divergências de áudio ao vincular esses arquivos no Windows.
