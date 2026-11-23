@@ -1,5 +1,9 @@
 # Notas de versão
 
+## 3.15.4
+
+- O XML do Premiere declara takes e B-rolls das faixas de sobreposição apenas como vídeo, evitando divergências de áudio ao vincular esses arquivos no Windows.
+
 ## 3.15.3
 
 - A geração manual processa as falas prontas mesmo quando outras ainda precisam de revisão do modo de uso.

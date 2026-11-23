@@ -455,17 +455,18 @@ def export_xml(out,visual_only=False,job=None,*,revisao_pendencias=False):
     def rate(p,value=None):
         f=fps if value is None else value;n=round(f)
         r=ET.SubElement(p,'rate');val(r,'timebase',n);val(r,'ntsc','TRUE' if abs(f-n)>.01 else 'FALSE')
-    def file(parent,path,fileid,video=False):
+    def file(parent,path,fileid,video=False,*,video_only=False):
         f=ET.SubElement(parent,'file',id=fileid);val(f,'name',path.name);val(f,'pathurl',path.resolve().as_uri());meta=metadata(path);rate(f,meta['fps'] if video else fps)
         val(f,'duration',round(meta['duration']*(meta['fps'] if video else fps)));media=ET.SubElement(f,'media')
         if video:
             sc=ET.SubElement(ET.SubElement(media,'video'),'samplecharacteristics');rate(sc,meta['fps']);val(sc,'width',meta['width']);val(sc,'height',meta['height']);val(sc,'pixelaspectratio','square')
-        if meta.get('has_audio',True):
+        if not video_only and meta.get('has_audio',True):
             am=ET.SubElement(media,'audio');val(am,'channelcount',meta['channels']);sc=ET.SubElement(am,'samplecharacteristics');val(sc,'depth',16);val(sc,'samplerate',meta['sample_rate'])
-    def clip(track,path,start,end,ins,kind,cid,enabled=True):
+    def clip(track,path,start,end,ins,kind,cid,enabled=True,*,video_only=False):
         c=ET.SubElement(track,'clipitem',id=cid);meta=metadata(path);sourcefps=meta['fps'] if kind=='video' else fps;sourcein=round(ins*sourcefps/fps);sourceout=round((ins+end-start)*sourcefps/fps)
         for k,v in [('name',path.name),('enabled','TRUE' if enabled else 'FALSE'),('duration',round(meta['duration']*sourcefps)),('start',start),('end',end),('in',sourcein),('out',sourceout)]:val(c,k,v)
-        rate(c,sourcefps);file(c,path,'file-'+digest(str(path)),kind=='video');st=ET.SubElement(c,'sourcetrack');val(st,'mediatype',kind);val(st,'trackindex',1)
+        rate(c,sourcefps);file_id='file-'+digest(str(path))+('-video-only' if video_only else '')
+        file(c,path,file_id,kind=='video',video_only=video_only);st=ET.SubElement(c,'sourcetrack');val(st,'mediatype',kind);val(st,'trackindex',1)
         if kind=='video' and (meta['width'],meta['height'])!=(info['width'],info['height']):
             effect=ET.SubElement(ET.SubElement(c,'filter'),'effect')
             for k,v in [('name','Basic Motion'),('effectid','basic'),('effectcategory','motion'),('effecttype','motion'),('mediatype','video')]:val(effect,k,v)
@@ -480,13 +481,13 @@ def export_xml(out,visual_only=False,job=None,*,revisao_pendencias=False):
         for i,piece in enumerate(layout['video']):clip(v1,piece['path'],piece['start'],piece['end'],piece['in'],'video','original-video-'+str(i))
         if visuals or brolls:
             track=ET.SubElement(video,'track')
-            for i,segment in enumerate(v for v in layout['visuals'] if not v.get('timeline_fechada')):clip(track,segment['path'],segment['start'],segment['end'],segment['in'],'video','visual-'+str(i))
+            for i,segment in enumerate(v for v in layout['visuals'] if not v.get('timeline_fechada')):clip(track,segment['path'],segment['start'],segment['end'],segment['in'],'video','visual-'+str(i),video_only=True)
         if brolls:
             # V3: b-roll escolhido pelo editor, ancorado no início da frase do original, sem áudio.
             v3=ET.SubElement(video,'track')
             for i,b in enumerate(brolls):
                 a=MT.shift(round(b['inicio_ms']/1000*fps),layout['changes']);e=MT.shift(round(b['fim_ms']/1000*fps),layout['changes'])
-                e=min(e,a+max(1,math.floor(metadata(b['path'])['duration']*fps)));clip(v3,b['path'],a,max(a+1,e),0,'video','broll-'+str(i))
+                e=min(e,a+max(1,math.floor(metadata(b['path'])['duration']*fps)));clip(v3,b['path'],a,max(a+1,e),0,'video','broll-'+str(i),video_only=True)
     audio=ET.SubElement(media,'audio');original=ET.SubElement(audio,'track');cuts=ET.SubElement(audio,'track');replacement=ET.SubElement(audio,'track')
     review_intervals = {}
     if revisao_pendencias:
@@ -569,7 +570,7 @@ def export_xml(out,visual_only=False,job=None,*,revisao_pendencias=False):
     if info['video'] and any(v.get('timeline_fechada') for v in visuals):
         track=seq.findall('media/video/track')[1]
         for i,v in enumerate(visuals):
-            if v.get('timeline_fechada'):clip(track,Path(out)/v['file'],v['start_frame'],v['end_frame'],0,'video','visual-completo-'+str(i))
+            if v.get('timeline_fechada'):clip(track,Path(out)/v['file'],v['start_frame'],v['end_frame'],0,'video','visual-completo-'+str(i),video_only=True)
     from .nomes_arquivos import write_xml
     if not visual_only:
         checked=coverage if not revisao_pendencias else {'itens':[r for r in coverage['itens'] if r['status']=='coberta']}

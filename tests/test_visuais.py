@@ -141,6 +141,18 @@ class VisualTests(unittest.TestCase):
         self.assertAlmostEqual(meta['duration'],(segments[-1]['end_frame']-segments[0]['start_frame'])/25,delta=.06)
         s=V.load(self.out);V.save(self.out,{'max_clip_s':2,'incluir':True});self.assertIsNone(V.load(self.out)['prepared']);self.assertTrue((self.out/segments[0]['file']).exists())
         with self.assertRaises(ValueError):T.export_xml(self.out,visual_only=True)
+    def test_full_take_with_audio_exports_video_only_and_preserves_source_audio(self):
+        take = {'file': '_fonte.mp4', 'start_frame': 25, 'end_frame': 150, 'timeline_fechada': True}
+        with patch.object(V, 'valid_prepared', return_value=[take]):
+            result = T.export_xml(self.out, visual_only=True)
+        media = ET.parse(self.out / result['xml']).find('sequence/media')
+        original, overlay = media.findall('video/track')
+        video = overlay.find('clipitem/file')
+        self.assertIsNotNone(video.find('media/video'))
+        self.assertIsNone(video.find('media/audio'))
+        self.assertNotEqual(original.find('clipitem/file').get('id'), video.get('id'))
+        self.assertIsNotNone(media.find('audio/track/clipitem/file/media/audio'))
+
     def test_manual_overlap_and_changed_basis_block(self):
         self.setup_plan();V.add(self.out,{'start':2000,'end':4000,'kit':1})
         with self.assertRaises(ValueError):V.schedule(self.out)
