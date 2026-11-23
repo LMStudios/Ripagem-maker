@@ -60,6 +60,11 @@ def probe(path,require_audio=True):
     if abs(rotation)%180==90:width,height=height,width
     return {'duration':float(d['format']['duration']),'fps':fps,'width':width,'height':height,'video':bool(video),'has_audio':has_audio,'sample_rate':int(audio.get('sample_rate',48000)),'channels':int(audio.get('channels',1))}
 
+def premiere_file_uri(path_uri):
+    # Premiere for Windows can read an empty host as a network path when relinking a drive letter.
+    return 'file://localhost' + path_uri[len('file://'):] if re.match(r'^file:///[A-Za-z]:/', path_uri) else path_uri
+
+
 def plan_path(out):return Path(out)/'trocas'/'plano.json'
 
 def form_ready(row,text):
@@ -456,12 +461,17 @@ def export_xml(out,visual_only=False,job=None,*,revisao_pendencias=False):
         f=fps if value is None else value;n=round(f)
         r=ET.SubElement(p,'rate');val(r,'timebase',n);val(r,'ntsc','TRUE' if abs(f-n)>.01 else 'FALSE')
     def file(parent,path,fileid,video=False,*,video_only=False):
-        f=ET.SubElement(parent,'file',id=fileid);val(f,'name',path.name);val(f,'pathurl',path.resolve().as_uri());meta=metadata(path);rate(f,meta['fps'] if video else fps)
+        f=ET.SubElement(parent,'file',id=fileid);val(f,'name',path.name);val(f,'pathurl',premiere_file_uri(path.resolve().as_uri()));meta=metadata(path);rate(f,meta['fps'] if video else fps)
         val(f,'duration',round(meta['duration']*(meta['fps'] if video else fps)));media=ET.SubElement(f,'media')
         if video:
             sc=ET.SubElement(ET.SubElement(media,'video'),'samplecharacteristics');rate(sc,meta['fps']);val(sc,'width',meta['width']);val(sc,'height',meta['height']);val(sc,'pixelaspectratio','square')
         if not video_only and meta.get('has_audio',True):
-            am=ET.SubElement(media,'audio');val(am,'channelcount',meta['channels']);sc=ET.SubElement(am,'samplecharacteristics');val(sc,'depth',16);val(sc,'samplerate',meta['sample_rate'])
+            am=ET.SubElement(media,'audio');val(am,'channelcount',meta['channels'])
+            if meta['channels'] in (1,2):
+                layout_name='mono' if meta['channels']==1 else 'stereo'
+                val(am,'channeldescription',layout_name)
+                val(am,'layout',layout_name)
+            sc=ET.SubElement(am,'samplecharacteristics');val(sc,'depth',16);val(sc,'samplerate',meta['sample_rate'])
     def clip(track,path,start,end,ins,kind,cid,enabled=True,*,video_only=False):
         c=ET.SubElement(track,'clipitem',id=cid);meta=metadata(path);sourcefps=meta['fps'] if kind=='video' else fps;sourcein=round(ins*sourcefps/fps);sourceout=round((ins+end-start)*sourcefps/fps)
         for k,v in [('name',path.name),('enabled','TRUE' if enabled else 'FALSE'),('duration',round(meta['duration']*sourcefps)),('start',start),('end',end),('in',sourcein),('out',sourceout)]:val(c,k,v)

@@ -141,6 +141,14 @@ class VisualTests(unittest.TestCase):
         self.assertAlmostEqual(meta['duration'],(segments[-1]['end_frame']-segments[0]['start_frame'])/25,delta=.06)
         s=V.load(self.out);V.save(self.out,{'max_clip_s':2,'incluir':True});self.assertIsNone(V.load(self.out)['prepared']);self.assertTrue((self.out/segments[0]['file']).exists())
         with self.assertRaises(ValueError):T.export_xml(self.out,visual_only=True)
+    def test_windows_xml_drive_uri_leaves_mac_and_network_paths_unchanged(self):
+        self.assertEqual(T.premiere_file_uri('file:///D:/App%20luiz/fala.wav'),
+                         'file://localhost/D:/App%20luiz/fala.wav')
+        self.assertEqual(T.premiere_file_uri('file:///Users/editor/fala.wav'),
+                         'file:///Users/editor/fala.wav')
+        self.assertEqual(T.premiere_file_uri('file://servidor/pasta/fala.wav'),
+                         'file://servidor/pasta/fala.wav')
+
     def test_full_take_with_audio_exports_video_only_and_preserves_source_audio(self):
         take = {'file': '_fonte.mp4', 'start_frame': 25, 'end_frame': 150, 'timeline_fechada': True}
         with patch.object(V, 'valid_prepared', return_value=[take]):
@@ -169,6 +177,8 @@ class VisualTests(unittest.TestCase):
         result=T.export_xml(self.out);xml=ET.parse(self.out/result['xml'])
         self.assertEqual(len(xml.findall('.//sequence/media/video/track')),2)
         tracks=xml.findall('.//sequence/media/audio/track');self.assertEqual(len(tracks),3)
+        self.assertEqual(tracks[2].findtext('clipitem/file/media/audio/layout'), 'stereo')
+        self.assertEqual(tracks[0].findtext('clipitem/file/media/audio/layout'), 'mono')
         self.assertEqual(tracks[1].findtext('clipitem/enabled'),'FALSE');self.assertEqual(tracks[2].findtext('clipitem/enabled'),'TRUE')
         (self.out/'precos_TROCA.json').write_text(json.dumps({'mapa_qtd':{'1|frascos':'3'}}))
         with self.assertRaises(ValueError):T.export_xml(self.out)
