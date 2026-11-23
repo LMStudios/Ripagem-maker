@@ -76,25 +76,33 @@
       return saved;
     });saveQueue=next;return next;
   }
+  const canGenerate = row => !(row?.forma_pendente && !row.forma_confirmada);
+  const usagePending = document.createElement('p');
+  usagePending.className = 'meta';
+  usagePending.setAttribute('role','status');
+  el('swap-estimate').after(usagePending);
   function readiness(){
     if(!plan)return;
     qa('[data-swap-path]').forEach(e=>e.textContent='Trabalho atual: '+folder);
     const rows = capture().filter(row => row.aprovado);
     const byId = new Map(plan.itens.map(row => [row.id, row]));
+    const ready = rows.filter(row => canGenerate(byId.get(row.id)));
+    const deferred = rows.length - ready.length;
+    usagePending.textContent = deferred ? deferred + ' fala(s) aguardando revisão do modo de uso. A geração inclui apenas as falas prontas.' : '';
     let approvedAudio = 0, pending = 0, canApprove = false;
     for (const row of rows) {
       const base = byId.get(row.id);
       const matchesAudio = base.novo === row.novo && base.speaker === row.speaker;
       if (base.audio?.aprovado && matchesAudio) approvedAudio++;
-      if (!base.audio?.fit || !matchesAudio) pending++;
+      if (canGenerate(base) && (!base.audio?.fit || !matchesAudio)) pending++;
       if (base.audio?.fit && (!base.audio.aprovado || !matchesAudio)) canApprove = true;
     }
     el('swap-summary').textContent=`${rows.length} texto(s) aprovado(s) · ${approvedAudio} áudio(s) aprovado(s).`;
     el('swap-ready').textContent=rows.length?`${approvedAudio} de ${rows.length} áudios aprovados. ${approvedAudio<rows.length?'Ouça e aprove os áudios na etapa 3 antes de montar.':'Pronto para gerar a montagem.'}`:'Aprove textos e áudios na etapa 3.';
-    el('swap-estimate').textContent=`${rows.length} frase(s) · ${rows.reduce((n,r)=>n+r.novo.length,0)} caracteres · ${new Set(rows.map(r=>r.speaker)).size} speaker(s). Consulte os preços do serviço; clonagem, regenerações e tentativas adicionais podem ser cobradas.`;
+    el('swap-estimate').textContent=`${ready.length} frase(s) prontas · ${ready.reduce((n,r)=>n+r.novo.length,0)} caracteres · ${new Set(ready.map(r=>r.speaker)).size} speaker(s). Consulte os preços do serviço; clonagem, regenerações e tentativas adicionais podem ser cobradas.`;
     el('swap-approve-all-audio').disabled=busy||!canApprove;
     el('swap-back-audio').hidden=rows.length>0&&rows.length===approvedAudio;
-    el('swap-generate').textContent=el('swap-regenerate').checked?'Regenerar '+rows.length+' falas selecionadas':pending?'Gerar '+pending+' falas pendentes':'Todos os áudios já estão preparados';el('swap-generate').disabled=busy||!rows.length||(!pending&&!el('swap-regenerate').checked);el('swap-duration-apply').disabled=busy||(!durationPending()&&!plan.itens.some(r=>r.audio?.raw&&!r.audio?.fit));el('swap-autofit').disabled=busy||plan.modo_duracao==='expandir';el('swap-export').disabled=busy||!rows.length||rows.length!==approvedAudio;el('swap-review').disabled=el('swap-export').disabled;document.dispatchEvent(new CustomEvent('swap:state'));
+    el('swap-generate').textContent=el('swap-regenerate').checked?'Regenerar '+ready.length+' falas prontas':pending?'Gerar '+pending+' falas prontas':deferred?'Aguardando revisão do modo de uso':'Todos os áudios já estão preparados';el('swap-generate').disabled=busy||!ready.length||(!pending&&!el('swap-regenerate').checked);el('swap-duration-apply').disabled=busy||(!durationPending()&&!plan.itens.some(r=>r.audio?.raw&&!r.audio?.fit));el('swap-autofit').disabled=busy||plan.modo_duracao==='expandir';el('swap-export').disabled=busy||!rows.length||rows.length!==approvedAudio;el('swap-review').disabled=el('swap-export').disabled;document.dispatchEvent(new CustomEvent('swap:state'));
   }
   function render(){
     if(!plan)return;el('swap-duration-mode').value=plan.modo_duracao||'fixo';el('swap-duration-info').textContent=plan.modo_duracao==='expandir'?'Falas maiores são aceitas. A prévia e o XML abrem espaço sem acelerar a voz.':'Este trabalho mantém a duração original. Para aceitar falas maiores, selecione Abrir espaço e aplique aos áudios existentes.';el('swap-autofit').disabled=plan.modo_duracao==='expandir'||busy;
@@ -222,7 +230,7 @@
   el('swap-forget').onclick=()=>action(async()=>{await call('esquecer-chave');el('swap-key').value='';el('swap-key-status').textContent='Chaves de voz removidas deste computador.';});
   async function generate(pending=false){if(busy)return;if(durationPending()){durationNotice();el('swap-form-notice').scrollIntoView({block:'center',behavior:'smooth'});el('swap-fix-duration').focus({preventScroll:true});return;}setBusy(true);voiceProgress({kind:'vozes',status:'na_fila',step:'Salvando textos e preparando geração…'});await action(async()=>{
     await save();qa('[data-swap-voice]').forEach(i=>voices[i.dataset.swapVoice]=i.value.trim());
-    const options={provider:el('swap-provider').value,model:el('swap-model').value,voices,autoriza_envio:el('swap-send').checked,autoriza_clonagem:el('swap-consent').checked,excluir_clones:el('swap-delete').checked,autofit:el('swap-autofit').checked,regenerar:pending?false:el('swap-regenerate').checked,somente_pendentes:pending};
+    const options={provider:el('swap-provider').value,model:el('swap-model').value,voices,autoriza_envio:el('swap-send').checked,autoriza_clonagem:el('swap-consent').checked,excluir_clones:el('swap-delete').checked,autofit:el('swap-autofit').checked,regenerar:pending?false:el('swap-regenerate').checked,somente_pendentes:pending,adiar_modo_uso:true};
     await call('preferencias-voz',{salvar:true,config:voiceOptions()});const job=await call('gerar',{options});el('swap-cancel').hidden=false;startJob(job);
   });if(!currentJob)setBusy(false);}
   let regeneratingOne=false;
@@ -255,7 +263,7 @@
   el('swap-generate').onclick=()=>generate(!el('swap-regenerate').checked);
   el('swap-export').onclick=()=>action(async()=>{await save();el('swap-export').disabled=true;try{const r=await call('exportar');el('swap-export-result').innerHTML=`<p><b>Montagem salva no trabalho atual.</b> ${r.trechos} troca(s) de áudio e ${r.visuais||0} sobreposição(ões) em V2. Salve uma cópia do XML abaixo para importar no Premiere.</p><div class="links"><a download data-studio-xml="${x(r.xml)}" href="${url(r.xml)}?dl=1">Salvar montagem XML em Downloads</a><a href="${url(r.json)}?dl=1">Salvar relatório JSON</a></div><p class="meta">Premiere → Arquivo → Importar (⌘I) → abra a sequência com o mesmo nome do XML. A1 mantém o restante original; A2 guarda os trechos originais desativados e A3 contém as falas novas correspondentes. Confira os pontos de entrada/saída e o volume antes de exportar.</p>`;}finally{readiness();}});
   el('swap-review').onclick=()=>action(async()=>{await save();el('swap-cancel').hidden=false;startJob(await call('revisar',{aliases:el('alias2').value}));});
-  window.SwapUX={acceptPlan(value){const same=JSON.stringify(plan?.itens)===JSON.stringify(value.itens);plan=value;if(same)readiness();else render();return !same;},get plan(){return plan;},get busy(){return busy;},capture,save,render,readiness,generate,call,action,startJob,renderSpeakers,voiceOptions,restoreVoicePreferences,importAudio,regenerateOne};
+  window.SwapUX={acceptPlan(value){const same=JSON.stringify(plan?.itens)===JSON.stringify(value.itens);plan=value;if(same)readiness();else render();return !same;},get plan(){return plan;},get busy(){return busy;},canGenerate,capture,save,render,readiness,generate,call,action,startJob,renderSpeakers,voiceOptions,restoreVoicePreferences,importAudio,regenerateOne};
   const oldStep=wizardStep;
   wizardStep=function(n){if(n>=4&&plan&&!busy){return action(async()=>{await save();oldStep(n);document.dispatchEvent(new CustomEvent('swap:step'));});}else {oldStep(n);document.dispatchEvent(new CustomEvent('swap:step'));}};
 })();

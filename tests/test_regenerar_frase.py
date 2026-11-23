@@ -56,3 +56,20 @@ class RegenerateTests(unittest.TestCase):
         with patch.object(API.S,'job_folder',return_value=self.out),patch.object(API.S,'is_job',return_value=True),patch.object(API.V,'submit',return_value=fake) as submit:
             API.handle(h,'/fatiador/trocas/regenerar-frase',self.out.parent)
         self.assertEqual(received[0][0],200);opts=submit.call_args.args[1];self.assertEqual(opts['row_ids'],[rid]);self.assertTrue(opts['regenerar']);self.assertFalse(opts['somente_pendentes'])
+
+class PartialUsageGenerationTests(unittest.TestCase):
+    def test_manual_batch_defers_pending_usage_and_preserves_selection(self):
+        from plataforma import trocas, vozes
+        ready = {'id':'a','aprovado':True,'speaker':'A','novo':'Ready','inicio_ms':0,'fim_ms':1000}
+        pending = dict(ready,id='b',inicio_ms=1000,fim_ms=2000,forma_pendente=True)
+        plan = {'itens':[ready,pending]}
+        self.assertEqual(vozes.selected_rows(plan,{'adiar_modo_uso':True}),[ready])
+        self.assertTrue(pending['aprovado'])
+        with self.assertRaisesRegex(ValueError,'modo de uso'):
+            vozes.selected_rows(plan,{})
+        with self.assertRaisesRegex(ValueError,'modo de uso'):
+            vozes.selected_rows(plan,{'row_ids':['b'],'adiar_modo_uso':True})
+        with self.assertRaisesRegex(ValueError,'modo de uso'):
+            trocas.approved(plan,with_audio=True)
+        pending['forma_confirmada'] = True
+        self.assertEqual(vozes.selected_rows(plan,{'adiar_modo_uso':True}),[ready,pending])

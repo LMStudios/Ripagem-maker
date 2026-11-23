@@ -78,6 +78,11 @@ def selected_rows(plan,options,out=None):
         if any(not by_id[rid]['aprovado'] for rid in ids):raise ValueError('Selecione e aprove o texto desta frase antes de regenerar o áudio.')
         # Pendências de outras frases não ampliam nem bloqueiam esta solicitação.
         plan=dict(plan,itens=[r for r in plan['itens'] if r['id'] in set(ids)])
+    if 'row_ids' not in options and options.get('adiar_modo_uso') is True:
+        eligible = [r for r in plan['itens'] if not (r.get('forma_pendente') and not r.get('forma_confirmada'))]
+        if any(r['aprovado'] for r in plan['itens']) and not any(r['aprovado'] for r in eligible):
+            raise ValueError('Todas as falas selecionadas precisam de revisão do modo de uso.')
+        plan = dict(plan, itens=eligible)
     rows=T.approved(plan)
     if options.get('somente_pendentes'):
         rows=[r for r in rows if not r.get('audio',{}).get('fit') or r.get('audio',{}).get('texto_hash')!=T.digest([r['novo'],r['speaker']]) or (out is not None and not (Path(out)/r['audio']['fit']).exists())]
@@ -105,8 +110,8 @@ def submit(out,options):
     # O segredo é capturado pela função, não colocado nos parâmetros serializados.
     snapshot=T.digest([[r['id'],r['novo'],r['speaker']] for r in rows])
     def run(job,out=out):
-        if 'row_ids' in options and T.digest([[r['id'],r['novo'],r['speaker']] for r in selected_rows(T.load(out),options,out)])!=snapshot:
-            raise ValueError('A frase mudou enquanto aguardava na fila. Confira o texto e tente regenerar novamente.')
+        if ('row_ids' in options or options.get('adiar_modo_uso') is True) and T.digest([[r['id'],r['novo'],r['speaker']] for r in selected_rows(T.load(out),options,out)])!=snapshot:
+            raise ValueError('A seleção mudou enquanto aguardava na fila. Confira as falas e solicite a geração novamente.')
         return generate(job,out,options,key)
     return M.submit('vozes','Regenerar áudio de uma frase' if options.get('row_ids') else 'Gerar falas aprovadas por speaker',run,'render',dedupe_key=T.digest([str(Path(out).resolve()),options,[[r['id'],r['novo'],r['speaker']] for r in rows]]),out=str(out))
 

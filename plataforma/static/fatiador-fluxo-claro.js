@@ -24,15 +24,19 @@
   try{
    if(await U.flushDraft()===false||U.hasDraft())throw Error('Não foi possível salvar. Resolva o aviso de salvamento antes de continuar.');
    const chosen=U.capture().filter(r=>r.aprovado);
-   const unresolved=U.plan.itens.filter(r=>r.mencoes_revisar?.length&&!r.mencao_descartada&&!chosen.some(c=>c.id===r.id));
+   const unresolved=U.plan.itens.filter(r=>r.mencoes_revisar?.length&&!r.mencao_descartada&&U.canGenerate(r)&&!chosen.some(c=>c.id===r.id));
    if(unresolved.length){
     document.querySelector('[data-filter="issues"]')?.click();
     throw Error(`Confira ${unresolved.length} menção(ões) provável(is) em Erros e alertas. Aprove a frase ou descarte a sugestão para continuar.`);
    }
    if(!chosen.length)throw Error('Selecione pelo menos um texto para continuar.');
-   if(chosen.some(r=>{const base=U.plan.itens.find(i=>i.id===r.id);return base?.forma_pendente&&!base.forma_confirmada;}))throw Error('Há frases com modo de uso pendente. Informe a orientação correta ou reescreva e confirme cada adaptação.');
-   if(chosen.some(r=>!r.novo.trim()||!r.speaker))throw Error('Preencha o texto e o speaker de todas as frases selecionadas.');
-   await U.save();U.render();message('Textos salvos. Prepare as vozes e autorize a geração na próxima etapa.');$('speech-generate').click();
+   const ready=chosen.filter(r=>U.canGenerate(U.plan.itens.find(i=>i.id===r.id)));
+   if(!ready.length){
+    document.querySelector('[data-review="usage"]')?.click();
+    throw Error('Todas as falas selecionadas precisam de revisão do modo de uso. Corrija e confirme uma delas para começar.');
+   }
+   if(ready.some(r=>!r.novo.trim()||!r.speaker))throw Error('Preencha o texto e o speaker de todas as frases selecionadas.');
+   await U.save();U.render();message(chosen.length>ready.length?'As falas prontas podem ser geradas. As demais continuam em revisão.':'Textos salvos. Prepare as vozes e autorize a geração na próxima etapa.');$('speech-generate').click();
   }catch(e){message(e.message);}finally{working=false;state();}
  }
  $('flow-approve-texts').onclick=texts;
@@ -48,7 +52,7 @@
   }
  }
  document.addEventListener('swap:audio-approved',audioDone);
- document.addEventListener('swap:finished',e=>{if(e.detail.status==='concluido'&&e.detail.kind==='vozes'&&!['audio-import','audio-regenerate'].includes(e.detail.origin)){if(selected().some(r=>!r.audio?.fit))$('speech-generate').click();else $('speech-listen').click();}});
+ document.addEventListener('swap:finished',e=>{if(e.detail.status==='concluido'&&e.detail.kind==='vozes'&&!['audio-import','audio-regenerate'].includes(e.detail.origin)){if(selected().some(r=>U.canGenerate(r)&&!r.audio?.fit))$('speech-generate').click();else $('speech-listen').click();}});
  document.addEventListener('swap:state',state);document.addEventListener('swap:render',()=>{
   if(scope!==folder){scope=folder;previous=new Map();warning.textContent='';}
   const invalid=(U.plan?.itens||[]).filter(r=>previous.get(r.id)&&!r.audio?.fit);

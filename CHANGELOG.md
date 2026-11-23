@@ -1,5 +1,9 @@
 # Notas de versão
 
+## 3.15.3
+
+- A geração manual processa as falas prontas mesmo quando outras ainda precisam de revisão do modo de uso.
+
 ## 3.15.2
 
 - Busca e instalação de atualizações do código dentro do app para usuários com login de equipe.
