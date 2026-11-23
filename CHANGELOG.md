@@ -1,5 +1,10 @@
 # Notas de versão
 
+## 3.15.2
+
+- Busca e instalação de atualizações do código dentro do app para usuários com login de equipe.
+- O app aguarda o término das tarefas, verifica o pacote e reabre após instalar na edição Electron atualizada.
+
 ## 3.15.1
 
 - Caçar B-rolls está disponível em Ferramentas avulsas, com busca, prévia e download sem precisar abrir um projeto.

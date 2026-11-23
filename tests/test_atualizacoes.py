@@ -45,3 +45,31 @@ class UpdateTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as root:
    with self.assertRaisesRegex(ValueError,'corrompido'):U.apply(dest.getvalue(),root)
    self.assertEqual(list(Path(root).iterdir()),[])
+
+class OnlineUpdateTests(unittest.TestCase):
+ def test_download_requires_matching_version_and_hash(self):
+  from plataforma import equipe_auth
+  data=package()
+  catalog=json.dumps({'versao':'2.2.0','sha256':hashlib.sha256(data).hexdigest()}).encode()
+  with patch.object(U,'version',return_value='2.1.0'), patch.object(equipe_auth,'configured',return_value=True):
+   with patch.object(equipe_auth,'download_update',side_effect=[catalog,data]) as read:
+    self.assertEqual(U.fetch_available('2.2.0'),data)
+    self.assertEqual(read.call_args.args[0],'Ripagem-Maker-Atualizacao-2.2.0.zip')
+   with patch.object(equipe_auth,'download_update',side_effect=[catalog,b'changed']):
+    with self.assertRaisesRegex(ValueError,'corrompido'):U.fetch_available('2.2.0')
+   with patch.object(equipe_auth,'download_update',return_value=catalog) as read:
+    with self.assertRaisesRegex(ValueError,'mudou'):U.fetch_available('2.3.0')
+    read.assert_called_once()
+
+ def test_no_online_channel_and_no_release(self):
+  from plataforma import equipe_auth
+  with patch.object(equipe_auth,'configured',return_value=False):
+   self.assertFalse(U.available()['configurado'])
+  with patch.object(equipe_auth,'configured',return_value=True), patch.object(equipe_auth,'download_update',return_value=None):
+   self.assertFalse(U.available()['disponivel'])
+
+ def test_zip_cannot_install_a_different_version(self):
+  with tempfile.TemporaryDirectory() as root:
+   with self.assertRaisesRegex(ValueError,'não corresponde'):
+    U.apply(package(),root,expected='2.3.0')
+   self.assertEqual(list(Path(root).iterdir()),[])

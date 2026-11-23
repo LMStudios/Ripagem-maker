@@ -42,6 +42,7 @@
     const result = await previous(...args);
     const view = document.getElementById('view');
     observer?.disconnect();
+    if (location.hash.includes('?atualizacoes')) active = 'versao';
     apply(view);
     // Cartões que chegam depois (dados carregados em segundo plano) entram no grupo certo.
     observer = new MutationObserver(() => { if (location.hash.startsWith('#/ajustes')) apply(view); else { observer.disconnect(); delete view.dataset.aj; } });

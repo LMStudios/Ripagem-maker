@@ -23,6 +23,7 @@ def main():
     if any(not p.is_file() or not p.stat().st_size for p in wanted):raise RuntimeError('Publicação incompleta: é obrigatório ter os dois executáveis da mesma versão.')
     dest.mkdir(exist_ok=True)
     for f in wanted:shutil.copy2(f,dest/f.name)
+    shutil.copy2(wanted[2].with_suffix('.latest.json'),dest/'latest.json')
     (dest/'LEIA-ME.txt').write_text(instructions(version))
     (dest/'SHA256SUMS.txt').write_text(''.join(hashlib.file_digest(f.open('rb'),'sha256').hexdigest()+'  '+f.name+'\n' for f in sorted(dest.iterdir()) if f.is_file() and f.name!='SHA256SUMS.txt'))
     print('Pacotes completos preparados em '+str(dest)+'. Ainda é necessário enviar ao Drive e confirmar o upload.')

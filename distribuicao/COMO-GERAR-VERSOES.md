@@ -46,3 +46,13 @@ No Windows, use a janela do aplicativo atualizada para ter diálogos nativos de 
 Salvar uma cópia. No navegador normal, a seleção de pasta local pode exigir colar o caminho.
 A entrega só é apresentada como atual se o XML estiver presente e não vazio; o caminho
 completo aparece na tela. Os XMLs continuam dependendo das mídias nos caminhos originais.
+
+## Atualização online pela conta da equipe
+
+A migração `20261123100000_atualizacoes_storage.sql` cria um bucket privado no projeto Supabase da equipe. A leitura é permitida para perfis ativos. A publicação é feita pelo mantenedor no painel de Storage.
+
+1. Gere e valide o ZIP de atualização. Envie `Ripagem-Maker-Atualizacao-<versão>.zip` ao bucket `ripagem-updates`.
+2. Envie o arquivo `.latest.json` gerado junto do ZIP com o nome `latest.json`, substituindo o catálogo anterior. Publique o catálogo depois do ZIP.
+3. Confira a atualização em **Ajustes → Versão e atualizações** com uma conta de teste.
+
+A 3.15.2 é a primeira versão com consulta online. Para ativá-la em instalações mais antigas, distribua os instaladores completos. O canal online atualiza o código. Mudanças no Electron ou nas dependências nativas ainda requerem instalador completo.

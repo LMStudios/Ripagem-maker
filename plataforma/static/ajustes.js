@@ -68,15 +68,87 @@ routes['/ajustes']=async()=>{
  };
 };
 
+document.addEventListener('DOMContentLoaded', async () => {
+ try {
+  const release = await api('/api/atualizacoes/disponivel');
+  if (!release.disponivel || sessionStorage.getItem('rm.update.depois') === release.versao) return;
+  const banner = document.createElement('div');
+  banner.className = 'card';
+  banner.style.cssText = 'position:fixed;inset:auto 16px 16px auto;width:min(360px,calc(100vw - 32px));box-sizing:border-box;z-index:50';
+  banner.innerHTML = '<p><strong>Atualização disponível</strong></p><p data-update-notes></p><div class="row"><a class="btn pri" href="#/ajustes?atualizacoes">Ver atualização</a><button type="button" class="btn ghost">Depois</button></div>';
+  banner.querySelector('[data-update-notes]').textContent = 'Versão ' + release.versao;
+  banner.querySelector('a').onclick = () => banner.remove();
+  banner.querySelector('button').onclick = () => {
+   sessionStorage.setItem('rm.update.depois', release.versao);
+   banner.remove();
+  };
+  document.body.append(banner);
+ } catch (error) { /* A consulta manual mostra erros de conexão. */ }
+});
+
 const settingsBeforeUpdates=routes['/ajustes'];
 routes['/ajustes']=async()=>{
  await settingsBeforeUpdates();
  const box=document.createElement('section');box.className='card';
- box.innerHTML=`<h2>Versão e atualizações</h2><p id="update-version">Consultando versão…</p><p>Recebeu uma versão nova? Escolha o ZIP de atualização enviado pelo responsável pelo Ripagem Maker. O mesmo pacote serve para Mac e Windows.</p><label class="f">Pacote de atualização<input type="file" accept=".zip" id="update-file"></label><p class="small mute">Use apenas pacotes de quem mantém o aplicativo. Trabalhos, chaves e configurações são preservados; uma cópia do código anterior é guardada. Termine as tarefas antes de atualizar. Depois, feche e abra o app.</p><button class="btn pri" id="update-apply" disabled>Aplicar atualização</button><p role="status" id="update-result"></p>`;
+ box.innerHTML=`<h2>Versão e atualizações</h2><p id="update-version">Consultando versão…</p><div class="row"><button type="button" class="btn" id="update-check">Verificar atualizações</button><button type="button" class="btn pri" id="update-install" hidden>Atualizar agora</button><button type="button" class="btn ghost" id="update-cancel" hidden>Cancelar espera</button></div><p id="update-notes" role="status"></p><details><summary>Instalar um ZIP manualmente</summary><p>Recebeu uma versão nova? Escolha o ZIP de atualização enviado pelo responsável pelo Ripagem Maker. O mesmo pacote serve para Mac e Windows.</p><label class="f">Pacote de atualização<input type="file" accept=".zip" id="update-file"></label><p class="small mute">Use apenas pacotes de quem mantém o aplicativo. Trabalhos, chaves e configurações são preservados; uma cópia do código anterior é guardada. Termine as tarefas antes de atualizar. Depois, feche e abra o app.</p><button class="btn pri" id="update-apply" disabled>Aplicar atualização</button></details><p role="status" id="update-result"></p>`;
  document.querySelector('#view .page-h').after(box);
- const input=box.querySelector('input'),button=box.querySelector('button'),message=box.querySelector('#update-result');
- try{const d=await api('/api/versao');box.querySelector('#update-version').textContent='Versão instalada: '+d.versao;if(d.reinicio_necessario){message.textContent='Atualização aplicada. Feche e abra o aplicativo.';input.disabled=true;return;}}
+ const input=box.querySelector('input'),button=box.querySelector('#update-apply'),message=box.querySelector('#update-result');
+ try{const d=await api('/api/versao');box.querySelector('#update-version').textContent='Versão instalada: '+d.versao;if(d.reinicio_necessario){message.textContent='Atualização aplicada. Feche e abra o aplicativo.';input.disabled=true;box.querySelector('#update-check').disabled=true;return;}}
  catch(e){box.querySelector('#update-version').textContent='Feche e abra o app para ativar o atualizador.';input.disabled=true;return;}
+ const check = box.querySelector('#update-check'), install = box.querySelector('#update-install');
+ const cancel = box.querySelector('#update-cancel'), notes = box.querySelector('#update-notes');
+ check.disabled = false;
+ let release, waiting = false;
+ cancel.onclick = () => { waiting = false; };
+ check.onclick = async () => {
+  check.disabled = true;
+  install.hidden = true;
+  message.textContent = '';
+  notes.textContent = 'Buscando a última versão…';
+  try {
+   release = await api('/api/atualizacoes/disponivel');
+   install.hidden = !release.disponivel;
+   notes.textContent = release.disponivel ? 'Versão ' + release.versao + (release.notas ? ' · ' + release.notas : '')
+    : release.configurado ? 'Nenhuma atualização disponível.' : 'A busca online precisa do login da equipe. Você também pode instalar um ZIP.';
+  } catch (error) { notes.textContent = error.message; }
+  finally { check.disabled = false; }
+ };
+ install.onclick = async () => {
+  check.disabled = install.disabled = input.disabled = button.disabled = true;
+  waiting = true;
+  let applied = false;
+  try {
+   while (waiting && box.isConnected) {
+    cancel.hidden = true;
+    message.textContent = 'Baixando e verificando a atualização…';
+    const response = await fetch('/api/atualizacoes/instalar', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({versao:release.versao})});
+    const result = await response.json();
+    if (response.ok) {
+     applied = true;
+     message.textContent = 'Versão ' + result.versao + ' aplicada. Feche e abra o app para continuar.';
+     if (window.ripagemDesktop?.restart_after_update) {
+      const restart = await window.ripagemDesktop.restart_after_update();
+      if (restart.ok) message.textContent = 'Reabrindo o aplicativo…';
+     }
+     return;
+    }
+    if (!result.aguardar) throw Error(result.erro || 'Não foi possível atualizar.');
+    message.textContent = 'Aguardando as tarefas terminarem…';
+    cancel.hidden = false;
+    await new Promise(resolve => setTimeout(resolve, 4000));
+   }
+   message.textContent = 'Espera cancelada.';
+  } catch (error) {
+   message.textContent = applied ? 'Atualização aplicada. Feche e abra o aplicativo.' : error.message;
+  } finally {
+   cancel.hidden = true;
+   if (!applied) {
+    check.disabled = install.disabled = input.disabled = false;
+    button.disabled = !input.files.length;
+   }
+  }
+ };
+ if (location.hash.includes('?atualizacoes')) check.click();
  input.onchange=()=>{button.disabled=!input.files.length;message.textContent='';};
  button.onclick=async()=>{
   const file=input.files[0];if(!file)return;

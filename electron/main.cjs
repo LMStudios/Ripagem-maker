@@ -101,6 +101,14 @@ function nativeBridge(){
  });
  wrap('files:open',async(file,reveal)=>{if(!path.isAbsolute(file))throw Error('Informe um caminho completo.');const info=await fsp.stat(file);if(!info.isDirectory()&&!info.isFile())throw Error('Caminho não é um arquivo ou pasta.');if(reveal)shell.showItemInFolder(file);else{const error=await shell.openPath(info.isDirectory()?file:path.dirname(file));if(error)throw Error(error);}return {ok:true,arquivo:file};});
  wrap('app:logs',async()=>{const error=await shell.openPath(path.dirname(logFile));if(error)throw Error(error);return {ok:true};},true);
+ wrap('app:restart-after-update',async()=>{
+  const response=await fetch(origin+'/api/desktop/status',{signal:AbortSignal.timeout(2500)});
+  if(!response.ok)throw Error('Não foi possível conferir o estado da atualização.');
+  const state=await response.json();
+  if(!state.atualizacao_pendente||state.ativas!==0)throw Error('A atualização ainda não está pronta para reiniciar.');
+  setImmediate(()=>{quitting=true;stopChild();app.relaunch();app.quit();});
+  return {ok:true};
+ });
  wrap('app:retry',async()=>{setImmediate(boot);return {ok:true};},true);
 }
 async function activeJobs(){const r=await fetch(origin+'/api/desktop/status',{signal:AbortSignal.timeout(2500)});if(!r.ok)throw Error('Não foi possível conferir as tarefas.');return (await r.json()).ativas;}

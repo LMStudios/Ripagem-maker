@@ -16,7 +16,7 @@ def status(runtime=None):return {'versao':version(),'versao_em_execucao':runtime
 def number(value):
  if not isinstance(value,str) or not re.fullmatch(r'\d+\.\d+\.\d+',value):raise ValueError('Versão do pacote inválida.')
  return tuple(map(int,value.split('.')))
-def apply(data,root=None):
+def apply(data,root=None, *, expected=None):
  global PENDING
  root=Path(root or ROOT).resolve()
  if len(data)>MAX_BYTES:raise ValueError('Pacote maior que 25 MB.')
@@ -27,6 +27,7 @@ def apply(data,root=None):
    if 'atualizacao.json' not in names or z.getinfo('atualizacao.json').file_size>1024*1024:raise ValueError('Escolha um ZIP de atualização do Ripagem Maker, não o instalador.')
    manifest=json.loads(z.read('atualizacao.json'))
    if not isinstance(manifest,dict):raise ValueError('Manifesto inválido.')
+   if expected is not None and manifest.get('versao') != expected:raise ValueError('A versão do ZIP não corresponde à versão anunciada.')
    files=manifest.get('arquivos')
    if manifest.get('formato')!='ripagem-update-v1' or not isinstance(files,dict):raise ValueError('Formato de atualização inválido.')
    if number(manifest.get('versao'))<number(version(root)):raise ValueError('Esse pacote é de uma versão anterior à instalada.')
@@ -58,3 +59,36 @@ def apply(data,root=None):
    raise
  PENDING=True
  return {'versao':manifest['versao'],'reinicio_necessario':True,'arquivos':len(contents),'backup':str(backup)}
+
+
+def available():
+    from . import equipe_auth
+    if not equipe_auth.configured():
+        return {'disponivel': False, 'configurado': False}
+    raw = equipe_auth.download_update('latest.json', 16384, optional=True)
+    if raw is None:
+        return {'disponivel': False, 'configurado': True}
+    try:
+        manifest = json.loads(raw)
+        remote = manifest['versao']
+        newer = number(remote) > number(version())
+        digest = manifest['sha256']
+        if not isinstance(digest, str) or not re.fullmatch(r'[a-f0-9]{64}', digest):
+            raise ValueError('Hash inválido.')
+        notes = manifest.get('notas', '')
+        if not isinstance(notes, str):
+            raise ValueError('Notas inválidas.')
+    except (ValueError, KeyError, TypeError, AttributeError) as error:
+        raise ValueError('O catálogo de atualizações está inválido.') from error
+    return {'disponivel': newer, 'configurado': True, 'versao': remote, 'sha256': digest, 'notas': notes[:4000]}
+
+
+def fetch_available(expected):
+    from . import equipe_auth
+    release = available()
+    if not release['disponivel'] or release['versao'] != expected:
+        raise ValueError('A versão disponível mudou. Procure novamente por atualizações.')
+    data = equipe_auth.download_update(f'Ripagem-Maker-Atualizacao-{expected}.zip', MAX_BYTES)
+    if hashlib.sha256(data).hexdigest() != release['sha256']:
+        raise ValueError('O pacote baixado está corrompido. Tente novamente.')
+    return data

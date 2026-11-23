@@ -7,6 +7,7 @@ const bridge=Object.freeze({
  save_file:address=>ipcRenderer.invoke('files:save',String(address)),
  open_path:(file,reveal=false)=>ipcRenderer.invoke('files:open',String(file),Boolean(reveal)),
  restart:()=>ipcRenderer.invoke('app:retry'),
+ restart_after_update:()=>ipcRenderer.invoke('app:restart-after-update'),
  logs:()=>ipcRenderer.invoke('app:logs')
 });
 contextBridge.exposeInMainWorld('ripagemDesktop',bridge);

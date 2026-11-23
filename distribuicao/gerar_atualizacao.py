@@ -13,7 +13,12 @@ def build():
  with zipfile.ZipFile(dest,'w',zipfile.ZIP_DEFLATED) as z:
   for name,raw in files.items():z.writestr(name,raw)
   z.writestr('atualizacao.json',json.dumps(manifest,ensure_ascii=False))
- dest.with_suffix('.sha256').write_text(hashlib.sha256(dest.read_bytes()).hexdigest()+'  '+dest.name+'\n')
+ digest=hashlib.sha256(dest.read_bytes()).hexdigest()
+ dest.with_suffix('.sha256').write_text(digest+'  '+dest.name+'\n')
+ notes=(ROOT/'CHANGELOG.md').read_text(encoding='utf-8') if (ROOT/'CHANGELOG.md').is_file() else ''
+ section=notes.split(f'## {version}\n',1)
+ summary=section[1].split('\n## ',1)[0].strip() if len(section)==2 else ''
+ dest.with_suffix('.latest.json').write_text(json.dumps({'versao':version,'sha256':digest,'notas':summary[:2000]},ensure_ascii=False),encoding='utf-8')
  print(dest)
  return dest
 if __name__=='__main__':build()

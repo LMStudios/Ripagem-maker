@@ -567,6 +567,29 @@ class _Equipe:
             return {'relatorios': [{key: row[key] for key in fields if key in row} for row in rows],
                     'proximo_offset': offset + limit if len(rows) == limit else None}
 
+    def download_update(self, filename, limit, *, optional=False):
+        if filename != 'latest.json' and not re.fullmatch(r'Ripagem-Maker-Atualizacao-[0-9]+\.[0-9]+\.[0-9]+\.zip', filename):
+            raise ValueError('Arquivo de atualização inválido.')
+        with self.lock:
+            if not self.require_active():
+                raise AuthError('Entre com sua conta para consultar atualizações.', 401)
+            url = self.config.url + '/storage/v1/object/authenticated/ripagem-updates/' + filename
+            headers = {'apikey': self.config.public_key, 'Authorization': f'Bearer {self.tokens.access}'}
+        try:
+            with requests.get(url, headers=headers, stream=True, allow_redirects=False, timeout=(3, 10)) as response:
+                if response.status_code == 404 and optional:
+                    return None
+                if response.status_code != 200:
+                    raise AuthError('Não foi possível acessar os arquivos de atualização.', 502)
+                body = bytearray()
+                for chunk in response.iter_content(65536):
+                    if len(body) + len(chunk) > limit:
+                        raise ValueError('O arquivo de atualização ultrapassa o limite permitido.')
+                    body.extend(chunk)
+                return bytes(body)
+        except requests.RequestException:
+            raise _unavailable() from None
+
     def admin(self, action, data=None):
         if action not in ('listar', 'convidar', 'editar', 'desativar', 'reativar'):
             raise AuthError('Ação de equipe desconhecida.')
@@ -612,3 +635,4 @@ admin = _instance.admin
 record_event = _instance.record_event
 sync_report = _instance.sync_report
 get_reports = _instance.get_reports
+download_update = _instance.download_update

@@ -1032,6 +1032,14 @@ class H(BaseHTTPRequestHandler):
         if p.path == '/api/integracoes':
             from plataforma import credenciais
             return self.send(200,credenciais.overview())
+        if p.path == '/api/atualizacoes/disponivel':
+            from plataforma import atualizacoes, equipe_auth
+            try:
+                return self.send(200, atualizacoes.available())
+            except equipe_auth.AuthError as error:
+                return self.send(error.status_code, {'erro': str(error)})
+            except ValueError as error:
+                return self.send(502, {'erro': str(error)})
         if p.path == '/api/versao':
             from plataforma import atualizacoes
             return self.send(200,atualizacoes.status(runtime=RUNTIME_VERSION))
@@ -1071,7 +1079,8 @@ class H(BaseHTTPRequestHandler):
             from plataforma import ml_core as _desktop_jobs
             active = sum(j.get("status") in ("running", "queued", "processando", "fila") for j in list(JOBS.values()))
             active += sum(j.status in ("na_fila", "fila", "executando", "running", "queued", "processando") for j in list(_desktop_jobs.JOBS.values()))
-            return self.send(200, {"ativas": active})
+            from plataforma import atualizacoes
+            return self.send(200, {"ativas": active, "atualizacao_pendente": atualizacoes.PENDING})
         if PLATAFORMA.handle(self, "GET"):
             return
         if p.path.startswith("/status/"):
@@ -1131,20 +1140,41 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, check(body.get('bytes'), UPLOADS))
             except (ValueError, TypeError, OSError) as error:
                 return self.send(400, {'erro': str(error)})
-        if p.path == '/api/atualizar':
-            from plataforma import limpeza
+        if p.path in ('/api/atualizar', '/api/atualizacoes/instalar'):
+            from plataforma import equipe_auth, limpeza
             try:
-                size=int(self.headers.get('Content-Length',0))
-                if not 0<size<=atualizacoes.MAX_BYTES:raise ValueError('Escolha um ZIP de atualização com até 25 MB.')
-                data=self.rfile.read(size)
-                if len(data)!=size:raise ValueError('Upload incompleto.')
+                expected = None
+                size = int(self.headers.get('Content-Length', 0))
+                if p.path.endswith('/instalar'):
+                    if not 0 < size <= 1024:
+                        raise ValueError('Informe a versão disponível.')
+                    body = json.loads(self.rfile.read(size))
+                    expected = body.get('versao') if isinstance(body, dict) else None
+                    atualizacoes.number(expected)
+                    if limpeza.active(legacy=JOBS.values()) or STORAGE.MAINTENANCE:
+                        return self.send(409, {'erro': 'Aguardando as tarefas terminarem.', 'aguardar': True})
+                    data = atualizacoes.fetch_available(expected)
+                else:
+                    if not 0 < size <= atualizacoes.MAX_BYTES:
+                        raise ValueError('Escolha um ZIP de atualização com até 25 MB.')
+                    data = self.rfile.read(size)
+                    if len(data) != size:
+                        raise ValueError('Upload incompleto.')
                 with STORAGE.LOCK:
-                    if STORAGE.MAINTENANCE or limpeza.active(legacy=JOBS.values()):return self.send(409,{'erro':'Aguarde todas as tarefas e a limpeza terminarem antes de atualizar.'})
-                    STORAGE.MAINTENANCE=True
-                    try:result=atualizacoes.apply(data)
-                    finally:STORAGE.MAINTENANCE=False
-                return self.send(200,result)
-            except (ValueError,OSError) as e:return self.send(400,{'erro':str(e)})
+                    if atualizacoes.PENDING:
+                        return self.send(409, {'erro': 'Reabra o aplicativo para concluir a atualização.'})
+                    if STORAGE.MAINTENANCE or limpeza.active(legacy=JOBS.values()):
+                        return self.send(409, {'erro': 'Aguardando as tarefas terminarem.', 'aguardar': True})
+                    STORAGE.MAINTENANCE = True
+                    try:
+                        result = atualizacoes.apply(data, expected=expected)
+                    finally:
+                        STORAGE.MAINTENANCE = False
+                return self.send(200, result)
+            except equipe_auth.AuthError as error:
+                return self.send(error.status_code, {'erro': str(error)})
+            except (ValueError, OSError) as error:
+                return self.send(400, {'erro': str(error)})
 
         if STORAGE.MAINTENANCE and not (p.path.startswith('/api/ml/job/') and p.path.endswith('/cancelar')):
             return self.send(409,{'erro':'A limpeza está em andamento. Aguarde antes de iniciar ou alterar trabalhos.'})

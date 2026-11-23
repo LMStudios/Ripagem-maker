@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "local.ripagemmaker.electron",
-    "artifactName": "Ripagem-Maker-3.15.1-Mac-${arch}.${ext}",
+    "artifactName": "Ripagem-Maker-3.15.2-Mac-${arch}.${ext}",
     "directories": {
       "output": "../distribuicao/pacotes/Electron"
     },
