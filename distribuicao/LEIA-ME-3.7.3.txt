@@ -1,0 +1,20 @@
+Ripagem Maker — 3.7.3 — Ofertas completas (Mac e Windows)
+
+ATUALIZAR: baixe o ZIP, sem descompactar. No app: Ajustes → Atualizar aplicativo → escolha Ripagem-Maker-Atualizacao-3.7.3.zip. Feche e reabra após terminar as tarefas em execução. Chaves, mídias e trabalhos são preservados.
+
+USAR: escolha Otimização no início e envie/reabra a VSL. Em Falas → Preços e kits, cole:
+2/3/6 para 1/3/6 (59/39/29 - 59/117/174)
+Clique em Identificar e adaptar os três kits. Confira e aprove os textos para gerar as vozes.
+
+O QUE MUDOU:
+- Detecta também valores por extenso em inglês, incluindo sixty-nine dollars.
+- Trabalha com blocos completos de oferta, sem substituir cegamente números de frascos pagos e grátis.
+- Confere quantidade × preço unitário = total para os três kits. Totais inconsistentes não são aplicados.
+- Ofertas sem fala própria são acrescentadas ao final do último bloco localizado. A montagem abre espaço para a fala completa.
+- Só acrescenta duração de tratamento quando informada, ou calculável de forma consistente a partir de dias/kit explícitos da transcrição. Não converte meses em dias por suposição.
+- Mantém o produto e o modo de uso. Não usa API/IA, nem gera vozes nesta etapa. Trocas numéricas avulsas ficaram em Avançado.
+- Planos e valores anteriores têm backup; falhas durante a aplicação restauram o estado anterior.
+
+VALIDAÇÃO:
+Transcrição real da GlycoWise: valores 49 e sixty-nine/69 localizados. Ofertas de 6 e 3 frascos adaptadas para 29/174 e 39/117; oferta de 1 frasco por 59 acrescentada ao último bloco. Nenhuma locução paga foi gerada. Também foram testadas outras matrizes, decimais, bônus pagos/grátis, totais inválidos, mudanças de speaker, estado desatualizado e restauração após falha.
+Interface e motor empacotado verificados no Mac; execução nativa do Windows não testada. Revisão dos textos e da montagem continua necessária. O detector usa padrões locais e mostra erro quando não encontra bloco com kit e preço, sem inventar timecodes.

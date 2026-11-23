@@ -1,0 +1,6 @@
+requests>=2.32,<3
+numpy>=1.26,<3
+faster-whisper>=1.1,<2
+keyring>=25,<26
+rapidocr>=3.10,<4
+yt-dlp>=2026.8

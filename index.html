@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troca de potes</title>
+<style>
+  :root{--bg:#f6f6f4;--card:#fff;--ink:#1d1d1b;--mute:#6b6b66;--line:#e4e3de;--acc:#5b3df5;--ok:#1f8a4c;--err:#c0392b}
+  @media (prefers-color-scheme:dark){:root{--bg:#141413;--card:#1e1e1c;--ink:#ecebe6;--mute:#9a9992;--line:#2e2e2b;--acc:#8b74ff}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  main{max-width:980px;margin:0 auto;padding:32px 16px 80px}
+  h1{font-size:22px;margin:0 0 4px} .sub{color:var(--mute);margin:0 0 24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px}
+  #drop{border:2px dashed var(--line);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:.15s}
+  #drop.over{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,transparent)}
+  #drop b{display:block;font-size:16px;margin-bottom:4px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;align-items:end}
+  label{font-size:12px;color:var(--mute);display:flex;flex-direction:column;gap:4px}
+  select,input,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);min-width:120px}
+  textarea{width:100%;resize:vertical;font-size:15px} input[type=checkbox]{min-width:0;flex:none;width:16px;height:16px;margin:2px 6px 2px 0} label:has(>input[type=checkbox]){align-items:center} #flist label{margin-top:8px} #swap-speakers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:12px} #swap-speakers .card{padding:14px} #swap-status{border-color:var(--acc)}
+  #swap-status.working #swap-step:before,#swap-inline-progress.working #swap-inline-step:before{content:"";display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--acc);border-radius:50%;margin-right:8px;animation:swap-spin 1s linear infinite}@keyframes swap-spin{to{transform:rotate(360deg)}}
+  #swap-inline-bar{accent-color:var(--acc)}
+  button{font:inherit;font-weight:600;padding:10px 18px;border:0;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer}
+  button:disabled{opacity:.4;cursor:default} button.ghost{background:transparent;color:var(--acc);border:1px solid var(--line)}
+  .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin:10px 0}
+  .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .4s}
+  #step{color:var(--mute)} .err{color:var(--err)!important}
+  .spk{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .spk .card{margin:0;padding:14px}
+  .tag{display:inline-block;font-weight:700;font-size:12px;padding:2px 8px;border-radius:99px;color:#fff}
+  .meta{color:var(--mute);font-size:13px;margin:6px 0 8px}
+  audio{width:100%;height:34px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .filters button{padding:6px 12px;font-size:13px}
+  .utt{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+  .utt .t{color:var(--mute);font-variant-numeric:tabular-nums;font-size:13px}
+  .utt p{margin:4px 0 8px}
+  .links{display:flex;gap:8px;flex-wrap:wrap}
+  .links a{color:var(--acc);text-decoration:none;font-weight:600;font-size:14px;border:1px solid var(--line);padding:6px 12px;border-radius:8px}
+  .hidden{display:none}
+[hidden]{display:none!important}.wizard-nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.wizard-nav [aria-current="step"]{background:var(--acc);color:white}.wizard-panel>h2{scroll-margin-top:20px}.wizard-panel>h2:focus{outline:none}.wizard-panel details{margin-top:12px}
+</style>
+<link rel="stylesheet" href="/static/fatiador-ux.css?v=3.10.17">
+<link rel="icon" type="image/png" href="/static/assets/app-icon.png">
+<link rel="stylesheet" href="/static/studio.css?v=3.7.1">
+<link rel="stylesheet" href="/static/fluxo-pratico.css?v=3.7.1">
+<link rel="stylesheet" href="/static/graphite.css?v=3.8.2">
+<link rel="stylesheet" href="/static/fluxo-guiado.css?v=3.10.0">
+<link rel="stylesheet" href="/static/interface-polish.css?v=3.10.11">
+<link rel="stylesheet" href="/static/clean-studio.css?v=3.10.20">
+<link rel="stylesheet" href="/static/equipe.css?v=3.11.1">
+</head>
+<body>
+<main>
+  <a href="/" style="font-size:13px;text-decoration:none">← Painel Ripagem Maker</a> <a href="/#/ajustes" style="font-size:13px;margin-left:16px">Ajustes e atualizações</a>
+<span id="equipe-posicao" hidden></span>
+<h1>Troca de potes</h1>
+  <details class="card" id="tutorial-premiere" style="margin-bottom:16px">
+    <summary style="font-weight:700;cursor:pointer">Mini tutorial: levar os trechos para o Premiere</summary>
+    <ol style="line-height:1.7;padding-left:22px">
+      <li>Abra <b>Ripagem Maker.app</b> no Finder e entre em <b>Troca de potes</b>. Não precisa abrir o Terminal. Mantenha a pasta APP_TRANSCRICAO_SPEAKERS no lugar.</li>
+      <li>Envie o vídeo original ou use <b>Reabrir trabalho salvo</b>. Na etapa 2, escolha segunda metade ou vídeo inteiro e informe os produtos.</li>
+      <li>Na etapa 3, aprove os textos, gere ou importe as falas e ouça cada áudio antes de aprovar. Na etapa 6, clique em <b>Gerar montagem pronta para Premiere</b> e baixe o XML. Se quiser apenas marcações para editar manualmente, use <b>Gerar JSON, marcadores e cortes para Premiere</b>.</li>
+      <li>No Premiere, abra seu projeto e use <b>Arquivo → Importar</b> (<b>⌘I</b>). Selecione o XML baixado. No painel Projeto, expanda a pasta importada e dê dois cliques na <b>sequência com o mesmo nome do XML</b>. O nome indica o produto, o tipo da entrega, a data e a versão.</li>
+      <li>Na montagem de <b>Troca de potes</b>, o vídeo fica contínuo em V1, o restante original em A1, os trechos originais separados e desativados em A2 e as falas novas correspondentes em A3; confira entradas, saídas e volume. As outras exportações entregam apenas cortes/marcadores para troca manual.</li>
+    </ol>
+    <p class="meta"><b>Onde ficam os arquivos?</b> No Ripagem Maker.app, os downloads vão para Downloads. Os originais da exportação ficam em saidas/nome-do-trabalho; use Abrir pasta no Finder no resultado. Não mova a mídia de origem antes de importar. Se o Premiere pedir para localizar mídia, aponte para o arquivo original.</p>
+    <p class="meta"><b>Se você enviou somente MP3/WAV:</b> a montagem com áudios aprovados gera uma sequência de áudio. As exportações antigas de cortes/marcadores exigem vídeo. JSON é um relatório, não um arquivo executável. O JSX roda dentro do Premiere por um host ExtendScript/CEP, como um painel de execução de scripts; não basta dar dois cliques nele no Finder. Para o caminho direto por Arquivo → Importar, envie o vídeo original e gere o XML.</p>
+    <p class="meta"><b>Se sua timeline já está editada:</b> use Alinhar com a timeline do Premiere com o SRT da sequência. Tempos do arquivo original não acompanham cortes, deslocamentos ou mudanças de velocidade. O JSX de cortes atua em A1; confirme sequência/trilha e salve uma cópia do projeto antes de executá-lo.</p>
+  </details>
+  <div class="card"><label>Reabrir trabalho salvo, sem transcrever novamente<select id="saved-work"><option value="">Selecione uma transcrição</option></select></label><button class="ghost" id="reopen" style="margin-top:8px">Reabrir</button><p id="reopen-error" class="meta" role="alert"></p></div>
+  <p class="sub">Transcreve pelo AssemblyAI e separa cada fala por speaker. O vídeo fica no seu computador; somente o áudio selecionado é enviado para transcrever. Tudo fica salvo na pasta <code>saidas/</code>.</p>
+
+  <section class="card">
+    <div id="drop"><b>Arraste o áudio ou vídeo aqui</b><span id="fname">ou clique para escolher (mp3, wav, m4a, mp4, mov…)</span></div>
+    <input type="file" id="file" class="hidden" accept="audio/*,video/*">
+    <div class="row">
+      <label>Idioma
+        <select id="lang">
+          <option value="auto">Detectar automático</option>
+          <option value="en">Inglês</option>
+          <option value="pt">Português</option>
+          <option value="es">Espanhol</option>
+          <option value="fr">Francês</option>
+          <option value="de">Alemão</option>
+          <option value="it">Italiano</option>
+        </select></label>
+      <label>Nº de speakers (vazio = automático, mín. 2)
+        <input id="spk" type="number" min="1" max="20" placeholder="auto"></label>
+      <label>Tamanho de cada trecho
+        <select id="maxsel">
+          <option value="0">Fala inteira</option>
+          <option value="5">até 5 s</option>
+          <option value="10">até 10 s</option>
+          <option value="15">até 15 s</option>
+          <option value="30">até 30 s</option>
+          <option value="60">até 60 s</option>
+          <option value="custom">Personalizado…</option>
+        </select></label>
+      <label id="maxcustom" class="hidden">Segundos
+        <input id="maxs" type="number" min="1" max="600" value="20"></label>
+      <label>Folga no corte (ms)
+        <input id="pad" type="number" value="120" min="0" max="1000"></label>
+      <label>Ignorar falas menores que (ms)
+        <input id="minms" type="number" value="300" min="0" max="5000"></label>
+      <button id="go" disabled>Transcrever e fatiar</button>
+    </div>
+    <div class="row prod">
+      <label style="flex:1;min-width:180px">Nome do projeto (opcional · vira o nome da pasta, com produto e data)
+        <input id="projeto-nome" maxlength="80" placeholder="ex.: VSL 14 Funil A"></label>
+      <label style="flex:1;min-width:180px">Produto original (deixe vazio = o app identifica sozinho)
+        <input id="prod" placeholder="automático"></label>
+      <label style="flex:1;min-width:180px">Variações que o áudio errou (opcional, separe por vírgula)
+        <input id="alias" placeholder="automático"></label>
+      <label style="flex:1;min-width:180px">Produto novo (opcional)
+        <input id="novo" placeholder="ex.: Hemoprime"></label>
+      <label style="flex-direction:row;align-items:center;gap:6px;white-space:nowrap">
+        <input type="checkbox" id="cutp" checked style="min-width:0"> cortar o áudio de cada frase</label>
+    </div>
+  </section>
+
+  <section class="card hidden" id="prog">
+    <strong id="pname"></strong>
+    <div class="bar"><i id="pbar"></i></div>
+    <div id="step"></div>
+  </section>
+
+  <section id="res" class="hidden">
+    <div class="card">
+      <div class="links" id="dl"></div>
+      <p class="meta" id="info"></p>
+    </div>
+    <div class="spk" id="spks"></div>
+    <div class="card hidden" id="fcard" style="margin-top:16px">
+      <h2 style="font-size:17px;margin:0 0 6px">Frases com o nome do produto</h2>
+      <div id="det" class="meta" style="margin:0 0 10px"></div>
+      <div id="troca-metrics" class="row" style="margin-bottom:12px"></div>
+      <details><summary>Resumo para copiar</summary>      <pre id="resumo" style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0 0 12px;white-space:pre-wrap"></pre></details>
+      <div class="links" style="margin-bottom:12px">
+        <button class="ghost" id="cpAll">Copiar lista</button>
+        <button class="ghost" id="cpNew">Copiar lista com produto novo</button>
+        <a href="#" id="fopen">Abrir pasta das frases</a>
+      </div>
+      <div class="row" style="margin:0 0 8px">
+        <label style="flex:1;min-width:160px">Refazer a busca — produto <input id="prod2"></label>
+        <label style="flex:1;min-width:160px">variações <input id="alias2"></label>
+        <label style="flex:1;min-width:160px">produto novo <input id="novo2"></label>
+        <button class="ghost" id="redo">Buscar de novo</button>
+      </div>
+      <div style="border:1px solid var(--line);padding:12px;border-radius:8px;margin:12px 0">
+        <h3 style="margin:0 0 8px">Trechos para trocar no Premiere</h3>
+        <p class="meta">Use as frases conferidas na etapa 3 para gerar marcadores e cortes. Não precisa abrir a revisão nem transcrever novamente.</p>
+        <label><input type="checkbox" id="exp-precos"> Incluir também as trocas de preços e kits geradas na etapa 3</label>
+        <button id="exp-premiere" class="ghost" style="margin-top:10px">Gerar JSON, marcadores e cortes para Premiere</button>
+        <div id="exp-result" style="margin-top:10px" aria-live="polite"></div>
+        <p class="meta">Tempos relativos ao arquivo original. Se sua sequência já tem cortes ou mudanças, use “Alinhar com a timeline do Premiere” abaixo.</p>
+      </div>
+      <div id="flist"></div>
+    </div>
+    <div class="card hidden" id="pcard" style="margin-top:16px">
+      <h2 style="font-size:17px;margin:0 0 6px">Troca de preços e kits</h2>
+      <p class="meta" style="margin:0 0 10px">O app procura na fala os valores ($) e as quantidades de kit (6-bottle, 3 bottles…). Preencha só o que muda — campo em branco fica igual. Sem IA: ele acha números e palavras, não entende a oferta, então confira as frases antes de gerar as vozes.</p>
+      <button id="pdetect">Detectar preços e kits</button>
+      <div id="pdet" style="margin-top:12px"></div>
+      <div id="pres" style="margin-top:12px"></div>
+    </div>
+    <div class="card hidden" id="tcard" style="margin-top:16px">
+      <h2 style="font-size:17px;margin:0 0 6px">Alinhar com a timeline do Premiere</h2>
+      <p class="meta" style="margin:0 0 10px">Exporte as legendas da sua sequência (.srt) e envie aqui. O app descobre onde cada frase caiu na timeline, mesmo que você tenha feito cortes.</p>
+      <div class="row" style="margin-top:0">
+        <label>Arquivo .srt da timeline <input type="file" id="srtf" accept=".srt,.txt"></label>
+        <label>Frame rate da sequência
+          <select id="fps"><option>23.976</option><option selected>24</option><option>25</option><option>29.97</option><option>30</option><option>50</option><option>59.94</option><option>60</option></select></label>
+        <button id="align" disabled>Alinhar</button>
+      </div>
+      <div id="tres" style="margin-top:12px"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2 style="font-size:17px;margin:0 0 10px">Todas as falas por speaker</h2>
+      <div class="filters" id="filters"></div>
+      <div id="utts"></div>
+    </div>
+  </section>
+</main>
+<script src="/static/audio-player.js?v=3.10.21"></script>
+<script>
+const COLORS=["#5b3df5","#e0663a","#1f8a4c","#c2185b","#0288d1","#8d6e00","#6d4c41","#00897b","#7b1fa2","#455a64"];
+const $=id=>document.getElementById(id); let file=null, folder="", colorOf={}, transcriptionConfirmed=false;
+fetch("/fatiador/salvos").then(r=>r.json()).then(d=>{for(const name of d.pastas||[]){const option=document.createElement("option");option.value=name;option.textContent=name;$("saved-work").append(option)}}).catch(()=>{});
+async function reopenSavedProject() {
+  const button = $("reopen"), select = $("saved-work"), notice = $("reopen-error");
+  if (button.disabled) return;
+  const selected = select.value;
+  if (!selected) {
+    notice.textContent = "Selecione um trabalho salvo.";
+    return;
+  }
+  button.disabled = select.disabled = true;
+  notice.textContent = "";
+  try {
+    const response = await fetch("/fatiador/reabrir", {method: "POST", body: JSON.stringify({folder: selected})});
+    const result = await response.json();
+    if (!response.ok) throw Error(result.erro || "Não foi possível reabrir o trabalho.");
+    show(result);
+  } catch (error) {
+    notice.textContent = error.message;
+  } finally {
+    button.disabled = select.disabled = false;
+  }
+}
+$("reopen").onclick = reopenSavedProject;
+function transcriptionBlocked(){return !file||file.size===0;}
+function syncTranscriptionFile(){
+  if($('go'))$('go').disabled=wizardBusy||transcriptionBlocked();
+  if($('wizard-chosen'))$('wizard-chosen').textContent=file?'Arquivo selecionado: '+file.name+' · '+(file.size/1048576).toFixed(1)+' MB':'Nenhum áudio ou vídeo selecionado. Volte à etapa Arquivo para escolher a VSL.';
+  if($('transcription-file-warning'))$('transcription-file-warning').hidden=!transcriptionBlocked();
+  document.querySelectorAll('[data-w-next="2"]').forEach(b=>{b.disabled=wizardBusy||transcriptionBlocked();});
+  document.querySelectorAll('[data-flow-step="2"]').forEach(b=>{b.disabled=wizardBusy||!transcriptionConfirmed;});
+}
+const pick=f=>{
+  if(wizardBusy){$('wizard-error').textContent='Aguarde a transcrição terminar antes de trocar o arquivo.';return;}
+  if(!f||f.size===0){$('wizard-error').textContent='O arquivo está vazio. Escolha outro áudio ou vídeo.';return;}
+  file=f;transcriptionConfirmed=false;wizardReady=false;updateWizard();$('wizard-error').textContent='';if($('fname'))$('fname').textContent=f.name+' — '+(f.size/1048576).toFixed(1)+' MB';document.dispatchEvent(new CustomEvent('ripagem:source-selected'));return true;
+};
+$("maxsel").onchange=()=>$("maxcustom").classList.toggle("hidden",$("maxsel").value!=="custom");
+$('drop').onclick=e=>{if(!e.target.closest('video,audio'))$('file').click();};
+$("file").onchange=e=>e.target.files[0]&&pick(e.target.files[0]);
+// Receive file drops across the first two steps; never let Chromium navigate to the video.
+function sourceDropFiles(transfer){
+  const list=Array.from(transfer?.files||[]);
+  if(list.length)return list;
+  return Array.from(transfer?.items||[]).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter(Boolean);
+}
+function sourceDropAllowed(){return wizardCurrent<=2&&!wizardBusy;}
+document.addEventListener('dragover',e=>{
+  if(e.target?.closest?.('[data-ux-row],[data-swap-row]'))return;
+  if(!sourceDropAllowed())return;
+  e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='copy';$('drop').classList.add('over');
+},true);
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop').classList.remove('over');},true);
+document.addEventListener('drop',e=>{
+  if(e.target?.closest?.('[data-ux-row],[data-swap-row]'))return;
+  if(wizardCurrent>2)return;
+  e.preventDefault();e.stopImmediatePropagation();$('drop').classList.remove('over');
+  if(wizardBusy){$('wizard-error').textContent='Aguarde a transcrição terminar antes de trocar o arquivo.';return;}
+  const dropped=sourceDropFiles(e.dataTransfer);
+  if(dropped.length!==1){$('wizard-error').textContent=dropped.length?'Arraste apenas um áudio ou vídeo por vez.':'Não recebi um arquivo de vídeo. Arraste o arquivo baixado do Finder ou use Escolher áudio ou vídeo.';return;}
+  pick(dropped[0]);
+},true);
+const fmt=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
+const url=p=>"/files/"+encodeURIComponent(folder)+"/"+p.split("/").map(encodeURIComponent).join("/");
+const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+const namingError=document.createElement('p');namingError.id='transcription-naming-error';namingError.setAttribute('role','alert');namingError.className='err';namingError.hidden=true;$('go').before(namingError);
+const namingFix=document.createElement('button');namingFix.id='transcription-naming-fix';namingFix.type='button';namingFix.className='ghost';namingFix.textContent='Corrigir identificação da entrega';namingFix.hidden=true;namingError.after(namingFix);
+namingFix.onclick = async () => {
+  await wizardStep(1);
+  const field = $(namingError.textContent.startsWith('Número da VSL') ? 'delivery-number-setup' : 'delivery-pitch-setup');
+  if (!field) return;
+  for (let parent = field.parentElement; parent; parent = parent.parentElement) {
+    if (parent.tagName === 'DETAILS') parent.open = true;
+  }
+  field.focus();
+  field.scrollIntoView({block: 'center'});
+};
+const OFF="Não consegui conectar ao processamento local. Verifique se o Ripagem Maker está aberto e tente novamente.";
+const fail=m=>{wizardBusy=false;updateWizard();wizardStep(2);$("step").className="err";$("step").textContent=m;$("go").disabled=false};
+async function checkTranscriptionUpload(source){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  let response;
+  try{response=await fetch('/upload/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bytes:source.size}),signal:controller.signal});}
+  catch(error){throw Error(OFF);}
+  finally{clearTimeout(timer);}
+  let data;try{data=await response.json();}catch(error){throw Error('O app enviou uma resposta inválida ao conferir o arquivo. Feche e abra a versão atual do aplicativo.');}
+  if(!response.ok||!data.ok)throw Error(data.erro||'Não foi possível conferir o espaço para receber o arquivo.');
+  return data;
+}
+async function uploadFailureMessage(source){
+  try{await checkTranscriptionUpload(source);return 'O app está aberto, mas a confirmação do envio foi interrompida. Antes de reenviar, confira em Projetos se a transcrição já começou, para evitar duplicá-la. Se não começou, selecione o vídeo ou áudio novamente e tente outra vez.';}
+  catch(error){return error.message;}
+}
+async function startTranscription(automatic=null){
+  if(wizardBusy)return;
+  if(!file){$("wizard-error").textContent="Escolha um arquivo primeiro.";wizardStep(1);return;}
+  const uploadFail=message=>{
+    if(!automatic){fail(message);return;}
+    wizardBusy=false;updateWizard();wizardStep(1);
+    document.dispatchEvent(new CustomEvent('ripagem:automatic-upload-error',{detail:message}));
+  };
+  let naming;try{naming=window.RipagemNaming?.capture()||{};}catch(e){$('wizard-error').textContent=e.message;const notice=$('transcription-naming-error');notice.textContent=e.message+' Corrija em Identificação da entrega.';notice.hidden=false;$('transcription-naming-fix').hidden=false;notice.scrollIntoView({block:'center'});return;}
+  $('transcription-naming-error').hidden=true;$('transcription-naming-fix').hidden=true;
+  wizardBusy=true;updateWizard();
+  $("go").disabled=true;$("res").classList.add("hidden");$("prog").classList.remove("hidden");
+  $("pname").textContent=file.name;$("step").className="";$("step").textContent="Conferindo espaço para receber o arquivo…";$("pbar").style.width="1%";
+  try{await checkTranscriptionUpload(file);}catch(error){uploadFail(error.message);return;}
+  $("step").textContent="Enviando para o app… 0%";
+  const x=new XMLHttpRequest(); x.open("POST","/upload");
+  x.setRequestHeader("X-Optimization",window.RipagemOptimization?.pending()?"1":"0");
+  if(automatic)x.setRequestHeader('X-Ripagem-Automatica',encodeURIComponent(JSON.stringify(automatic)));
+  const h={"X-Nomenclatura":encodeURIComponent(JSON.stringify(naming)),"X-Filename":encodeURIComponent(file.name),"X-Lang":$("lang").value,"X-Speakers":$("spk").value,
+    "X-Pad-Ms":$("pad").value,"X-Min-Ms":$("minms").value,
+    "X-Max-S":$("maxsel").value==="custom"?$("maxs").value:$("maxsel").value,
+    "X-Product":encodeURIComponent($("prod").value),"X-Aliases":encodeURIComponent($("alias").value),
+    "X-Second-Half":!automatic&&$("transcribe-range").value==="half"?"1":"0",
+    "X-New-Product":encodeURIComponent($("novo").value),"X-Projeto":encodeURIComponent(($("projeto-nome")?.value||"").trim()),"X-Cut-Phrases":$("cutp").checked?"1":"0"};
+  for(const k in h) x.setRequestHeader(k,h[k]);
+  if(window.RMStudioStarted)x.setRequestHeader('X-Studio-Start',String(window.RMStudioStarted));
+  x.setRequestHeader('X-Auto-Visual',document.getElementById('op-auto-upload')?.checked===false?'0':'1');
+  x.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);
+    $("step").textContent="Enviando para o app… "+p+"%";$("pbar").style.width=Math.max(1,p*0.05)+"%"}};
+  x.onload=()=>{try{const d=JSON.parse(x.responseText);if(x.status<200||x.status>=300||!d.job){uploadFail(d.erro||'Não foi possível iniciar a transcrição (HTTP '+x.status+').');return;}document.dispatchEvent(new CustomEvent('ripagem:transcription-job',{detail:d.job}));poll(d.job);}catch(e){uploadFail('Resposta inválida do app: '+x.status)}};
+  x.onerror=async()=>uploadFail(await uploadFailureMessage(file));
+  try{x.send(file);}catch(error){uploadFailureMessage(file).then(uploadFail);}
+}
+$("go").onclick=()=>startTranscription();
+let misses=0;
+async function poll(job){
+  let s;
+  try{s=await (await fetch("/status/"+job)).json();misses=0}
+  catch(e){if(++misses>=4)return fail(OFF);return setTimeout(()=>poll(job),2000)}
+  $("pbar").style.width=(s.pct||0)+"%";$("step").textContent=s.step||"";
+  if(s.status==="running") return setTimeout(()=>poll(job),1500);
+  $("go").disabled=false;wizardBusy=false;updateWizard();
+  if(s.status==="error"||!s.folder){$("step").className="err";$("step").textContent=s.step||"A transcrição não está mais disponível. Tente novamente.";document.dispatchEvent(new Event('ripagem:transcription-ended'));return}
+  show(s);
+}
+let FR=[];
+function renderFrases(frases,resumo,novo,det,metrics=null,rebuild=true){
+  FR=frases||[];
+  $("exp-result").innerHTML="";
+  $("exp-premiere").disabled=!FR.length;
+  $("fcard").classList.remove("hidden");
+  const candidates=det?[...(det.confirmar?[{nome:det.product,mencoes:det.mencoes}]:[]),...(det.alternativas||[])]:[];
+  const detBox=$("det");
+  detBox.innerHTML=det?(det.confirmar?"Confirme o nome do produto original para buscar as menções.":`Identificado: <b>${esc(det.product)}</b>. Pode corrigir o nome abaixo.`)
+    :(resumo?"Produto informado por você. Para mudar, edite abaixo e clique em Buscar de novo.":"Não consegui identificar o produto sozinho. Digite o nome abaixo e clique em Buscar de novo.");
+  for(const a of candidates){
+    const b=document.createElement('button');b.type='button';b.className='ghost';b.style.marginLeft='6px';
+    b.textContent=a.nome;b.onclick=()=>useAlt(a.nome);detBox.append(b);
+  }
+  $('troca-metrics').innerHTML=metrics&&metrics.primeira_mencao_ms!==null?[['Primeira menção',fmt(metrics.primeira_mencao_ms)],['Janela de troca até o final',fmt(metrics.janela_troca_ms)],['Áudio das frases a substituir',fmt(metrics.soma_frases_ms||0)]].map(([title,value])=>`<div class="card" style="flex:1;min-width:170px;margin:0"><div class="meta">${title}</div><strong style="font-size:24px">${value}</strong></div>`).join(''):'';
+  $("resumo").textContent=resumo||"";
+  $("flist").innerHTML="";
+  $("cpNew").classList.toggle("hidden",!novo||!FR.length);
+  if($("prod2").value.trim())window.loadSwapPlan?.(rebuild);
+
+}
+const useAlt=n=>{$("prod2").value=n;$("alias2").value="";$("redo").click()};
+const cp=(i,n)=>navigator.clipboard.writeText(n?FR[i].novo:FR[i].text);
+$("cpAll").onclick=()=>navigator.clipboard.writeText($("resumo").textContent+"\n\n"+FR.map(f=>f.n+". "+f.text).join("\n"));
+$("cpNew").onclick=()=>navigator.clipboard.writeText(FR.map(f=>f.n+". [Speaker "+f.speaker+"] "+f.novo).join("\n"));
+$("fopen").onclick=e=>{e.preventDefault();fetch("/open/"+encodeURIComponent(folder)+"/"+encodeURIComponent("FRASES_"+$("prod2").value.replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_").slice(0,30).toUpperCase()))};
+$("redo").onclick=async()=>{
+  $("redo").disabled=true;$("redo").textContent="Buscando…";
+  if(!$("prod2").value.trim()){alert("Digite o nome do produto.");$("redo").disabled=false;$("redo").textContent="Buscar de novo";return}
+  try{const r=await fetch("/frases",{method:"POST",body:JSON.stringify({folder,product:$("prod2").value,aliases:$("alias2").value,novo:$("novo2").value,cut:$("cutp").checked})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.erro); renderFrases(d.frases,d.resumo,$("novo2").value,null,d.metricas)}
+  catch(e){alert("Erro: "+e.message)}
+  $("redo").disabled=false;$("redo").textContent="Buscar de novo";
+};
+$("exp-premiere").onclick=async()=>{
+  const button=$("exp-premiere");button.disabled=true;$("exp-result").textContent="Gerando os arquivos dos trechos identificados…";
+  try{
+    const r=await fetch("/fatiador/premiere",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({folder,product:$("prod2").value,aliases:$("alias2").value,precos:$("exp-precos").checked,fps:$("fps").value})});
+    const d=await r.json();if(!r.ok)throw Error(d.erro);
+    const labels={json:"Trechos JSON",jsx:"Marcadores JSX",cortes_jsx:"Cortes de áudio A1 (JSX)",xml:"Sequência marcada (XML)",cortes:"Cortes de vídeo e áudio (XML)"};
+    $("exp-result").innerHTML=`<div class="links">${Object.entries(d.exports).map(([k,v])=>`<a href="${url(v)}?dl=1">${labels[k]||k}</a>`).join("")}</div><p class="meta">${d.itens.length} trecho(s) · ${d.itens.filter(i=>i.status==="revisar").length} para revisar. ${d.exports.xml?"Importe o XML no Premiere para abrir uma sequência nova com os trechos separados.":"Fonte somente de áudio: use o JSON/JSX na sequência correspondente."} O JSX de cortes fatia apenas a trilha A1, sem apagar conteúdo. Menções aproximadas ficam somente marcadas.</p>`;
+  }catch(e){$("exp-result").textContent="Erro: "+e.message;}finally{button.disabled=!FR.length;}
+};
+$("srtf").onchange=()=>$("align").disabled=!$("srtf").files[0];
+$("align").onclick=async()=>{
+  $("align").disabled=true;$("align").textContent="Alinhando…";
+  try{
+    const srt=await $("srtf").files[0].text();
+    const r=await fetch("/alinhar",{method:"POST",body:JSON.stringify({folder,srt,fps:$("fps").value})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.erro);
+    const cor={ok:"var(--ok)",revisar:"#c98a00",nao_encontrada:"var(--err)"}, nome={ok:"ok",revisar:"revisar",nao_encontrada:"não encontrada"};
+    $("tres").innerHTML=`<div class="links" style="margin-bottom:10px">
+      <a href="${url(d.csv)}?dl=1">Baixar lista (.csv)</a><a href="${url(d.jsx)}?dl=1">Baixar script do Premiere (.jsx)</a></div>
+      <div class="meta">${d.itens.filter(i=>i.status==="ok").length} ok · ${d.itens.filter(i=>i.status==="revisar").length} para revisar · ${d.itens.filter(i=>i.status==="nao_encontrada").length} não encontradas (provavelmente já cortadas da timeline)</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr style="text-align:left;color:var(--mute)"><th>#</th><th>Entra</th><th>Sai</th><th>Status</th><th>Frase</th></tr>`+
+      d.itens.map(i=>`<tr style="border-top:1px solid var(--line)"><td>${i.n}</td><td style="font-variant-numeric:tabular-nums">${i.tc_in}</td><td style="font-variant-numeric:tabular-nums">${i.tc_out}</td>
+      <td style="color:${cor[i.status]};font-weight:600">${nome[i.status]}</td><td>${esc(i.text.slice(0,90))}</td></tr>`).join("")+`</table></div>`;
+  }catch(e){$("tres").innerHTML=`<span class="err">${esc(e.message)}</span>`}
+  $("align").disabled=false;$("align").textContent="Alinhar";
+};
+
+/* ---------------- troca de preços e kits ---------------- */
+let PD=null, PR=[], PIGN=new Set();
+const money=v=>"$"+(+v).toLocaleString("en-US",{minimumFractionDigits:String(v).includes(".")?2:0});
+const TIPO={frascos:"frascos/potes",kits:"kits/pacotes",meses:"meses"};
+$("pdetect").onclick=async()=>{
+  $("pdetect").disabled=true;$("pdetect").textContent="Procurando…";
+  try{const r=await fetch("/precos",{method:"POST",body:JSON.stringify({folder})});PD=await r.json();if(!r.ok)throw new Error(PD.erro);PIGN=new Set();renderPD()}
+  catch(e){$("pdet").innerHTML=`<span class="err">${esc(e.message)}</span>`}
+  $("pdetect").disabled=false;$("pdetect").textContent="Detectar de novo";
+};
+function renderPD(){
+  if(!PD.valores.length&&!PD.quantidades.length){$("pdet").innerHTML=`<div class="meta">Não encontrei valores nem quantidades de kit nesta fala.</div>`;return}
+  const kitV=PD.valores.filter(v=>v.kit), outV=PD.valores.filter(v=>!v.kit);
+  const vrow=v=>`<tr style="border-top:1px solid var(--line)"><td style="font-weight:600;white-space:nowrap">${money(v.valor)}${v.por_unidade?` <span class="meta">por frasco</span>`:""}</td><td>${v.vezes}×</td>
+    <td class="meta" style="font-size:12.5px">${esc(v.exemplo.slice(0,110))}</td><td><input data-pv="${v.valor}" placeholder="manter" style="width:110px"></td></tr>`;
+  const qrow=q=>`<tr style="border-top:1px solid var(--line)"><td style="font-weight:600">${q.qtd} ${TIPO[q.tipo]}</td><td>${q.vezes}×</td>
+    <td class="meta" style="font-size:12.5px">${q.formas.map(esc).join(", ")}${q.tipo==="meses"?" · costuma ser duração de uso, não kit":""}</td><td><input data-qv="${q.chave}" placeholder="manter" style="width:80px" inputmode="numeric"></td></tr>`;
+  const head=`<tr style="text-align:left;color:var(--mute);font-size:12.5px"><th>Hoje</th><th>Vezes</th><th>Onde aparece</th><th>Novo</th></tr>`;
+  $("pdet").innerHTML=`
+    ${PD.kits.length?`<div class="meta" style="margin-bottom:8px">Kits que aparecem com preço na mesma frase: ${PD.kits.map(k=>`<span class="tag" style="background:#555;margin:2px">${k.qtd} un · ${money(k.preco)}${k.por_unidade?" cada":""}</span>`).join("")}</div>`:""}
+    <h3 style="font-size:14px;margin:12px 0 4px">Quantidades de kit</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">${head}${PD.quantidades.map(qrow).join("")||`<tr><td class="meta">nenhuma</td></tr>`}</table>
+    <h3 style="font-size:14px;margin:14px 0 4px">Preços em contexto de oferta</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">${head}${kitV.map(vrow).join("")||`<tr><td class="meta">nenhum</td></tr>`}</table>
+    ${outV.length?`<details style="margin-top:10px"><summary class="meta" style="cursor:pointer">Outros valores citados (${outV.length}) — custos, bônus, comparações</summary>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">${head}${outV.map(vrow).join("")}</table></details>`:""}
+    <div id="pwarn" class="err" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:12px"><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="pcut" checked style="min-width:0"> cortar o áudio de cada frase</label>
+      <span class="sp" style="flex:1"></span><button id="papply">Gerar frases com os valores novos</button></div>`;
+  $("papply").onclick=applyPrices;
+  document.querySelectorAll("[data-qv]").forEach(i=>i.oninput=warnDup);
+}
+function maps(){
+  const p={},q={};
+  document.querySelectorAll("[data-pv]").forEach(i=>{if(i.value.trim())p[i.dataset.pv]=i.value.trim()});
+  document.querySelectorAll("[data-qv]").forEach(i=>{if(i.value.trim())q[i.dataset.qv]=i.value.trim()});
+  return {p,q};
+}
+function warnDup(){
+  const fin={};
+  PD.quantidades.filter(x=>x.tipo!=="meses").forEach(x=>{const i=document.querySelector(`[data-qv="${x.chave}"]`);const n=(i&&i.value.trim())||String(x.qtd);(fin[x.tipo+"|"+n]=fin[x.tipo+"|"+n]||[]).push(x.qtd)});
+  const dup=Object.entries(fin).filter(([k,v])=>v.length>1).map(([k,v])=>`os kits de ${v.join(" e ")} ficariam com ${k.split("|")[1]}`);
+  $("pwarn").textContent=dup.length?"Atenção: "+dup.join("; ")+".":"";
+  const bad=[...document.querySelectorAll("[data-qv]")].some(i=>i.value.trim()&&!/^\d+$/.test(i.value.trim()));
+  if(bad)$("pwarn").textContent+=" Quantidade precisa ser um número inteiro.";
+  return !bad;
+}
+async function applyPrices(){
+  if(!warnDup())return;
+  const {p,q}=maps();
+  if(!Object.keys(p).length&&!Object.keys(q).length){$("pwarn").textContent="Preencha pelo menos um valor ou quantidade novo.";return}
+  $("papply").disabled=true;$("papply").textContent="Gerando…";
+  try{
+    const r=await fetch("/precos/aplicar",{method:"POST",body:JSON.stringify({folder,precos:p,quantidades:q,cut:$("pcut").checked,ignorar:[...PIGN]})});
+    const d=await r.json();if(!r.ok)throw new Error(d.erro);PR=d.frases;renderPR(d);document.dispatchEvent(new CustomEvent("ripagem:prices-applied",{detail:d}));
+  }catch(e){$("pres").innerHTML=`<span class="err">${esc(e.message)}</span>`}
+  $("papply").disabled=false;$("papply").textContent="Gerar frases com os valores novos";
+}
+function renderPR(d){
+  $("pres").innerHTML=`<pre style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap">${esc(d.resumo)}</pre>
+    ${d.aviso?`<div class="err">${esc(d.aviso)}</div>`:""}
+    <div class="links" style="margin:8px 0 12px"><button class="ghost" id="pcpo">Copiar lista original</button><button class="ghost" id="pcpn">Copiar lista com valores novos</button>
+      <a href="${url("precos_TROCA_NOVO.txt")}" target="_blank">Arquivo (.txt)</a>${PR.some(f=>f.file)?`<a href="#" id="popen">Abrir pasta dos áudios</a>`:""}
+      ${PIGN.size?`<button class="ghost" id="preset">Voltar a incluir todas</button>`:""}</div>
+    <div class="meta" style="margin-bottom:6px">Desmarque as frases que não devem mudar (ex.: “ganhe 3 frascos grátis”) e clique em Atualizar.</div>
+    ${PR.map((f,i)=>`<div class="utt pr" data-k="${f.speaker}"><div class="t">${fmt(f.start)}<br><b>${f.n}</b><br><input type="checkbox" checked data-pi="${f.start}" title="incluir esta frase" style="min-width:0"></div>
+      <div><span class="tag" style="background:${colorOf[f.speaker]||COLORS[0]}">Speaker ${f.speaker}</span> ${f.trocas.map(t=>`<span class="tag" style="background:#8d6e00">${esc(t)}</span>`).join(" ")}
+      ${(f.revisar||[]).map(t=>`<div style="margin-top:6px;padding:6px 10px;border-radius:8px;background:#fff4df;color:#8a5300;font-size:12.5px">⚠ ${esc(t)}</div>`).join("")}
+      <p>${esc(f.text)}</p><p style="color:var(--acc)">→ [Speaker ${f.speaker}] ${esc(f.novo)}</p>
+      ${f.file?`<span data-audio-placeholder="${url(f.file)}"></span>`:""}
+      <div class="links" style="margin-top:6px"><button class="ghost" style="padding:4px 10px;font-size:12px" data-pc="${i}">Copiar novo</button></div></div></div>`).join("")}
+    ${PR.length?`<div class="row" style="margin-top:10px"><button id="pupd">Atualizar sem as desmarcadas</button></div>`:""}`;
+  $("pcpo").onclick=()=>navigator.clipboard.writeText(d.resumo+"\n\n"+PR.map(f=>f.n+". "+f.text).join("\n"));
+  $("pcpn").onclick=()=>navigator.clipboard.writeText(PR.map(f=>f.n+". [Speaker "+f.speaker+"] "+f.novo).join("\n"));
+  document.querySelectorAll("[data-pc]").forEach(b=>b.onclick=()=>navigator.clipboard.writeText(PR[+b.dataset.pc].novo));
+  $("popen")&&($("popen").onclick=e=>{e.preventDefault();fetch("/open/"+encodeURIComponent(folder)+"/FRASES_PRECOS")});
+  $("preset")&&($("preset").onclick=()=>{PIGN=new Set();applyPrices()});
+  $("pupd")&&($("pupd").onclick=()=>{document.querySelectorAll("[data-pi]").forEach(c=>{if(!c.checked)PIGN.add(+c.dataset.pi)});applyPrices()});
+}
+function show(s){
+  folder=s.folder; colorOf={}; s.speakers.forEach((x,i)=>colorOf[x.speaker]=COLORS[i%COLORS.length]);
+  const tag=k=>`<span class="tag" style="background:${colorOf[k]}">Speaker ${k}</span>`;
+  $("dl").innerHTML=`<a href="#" onclick="fetch('/open/'+encodeURIComponent(folder));return false">Abrir pasta no Finder</a>
+    <a href="/fatiador/baixar-projeto/${encodeURIComponent(folder)}">Preparar e baixar ZIP do projeto</a>
+    <a href="${url("transcricao_speakers.txt")}" target="_blank">Transcrição (.txt)</a>
+    <a href="${url("legendas.srt")}?dl=1">Legendas (.srt)</a>
+    <a href="${url("transcricao_bruta.json")}?dl=1">JSON bruto</a>`;
+  const selection=s.recorte_transcricao;
+  $('wizard-coverage').textContent=selection?`VSL completa: ${fmt((s.duration||0)*1000)} · Áudio analisado: ${fmt(selection.inicio_ms)} até ${fmt(selection.fim_ms)}${selection.segunda_metade?' (segunda metade)':''}. Todos os tempos abaixo são do vídeo completo.`:'Transcrição anterior: confira os trechos encontrados. Os tempos são do arquivo original.';
+  $("info").textContent=`${s.speakers.length} speaker(s) · ${s.clips.length} trechos · idioma: ${s.language||"?"} · ${fmt((s.duration||0)*1000)} de áudio · pasta: saidas/${folder}`;
+  $("spks").innerHTML=s.speakers.map(x=>`<div class="card">${tag(x.speaker)}
+    <div class="meta">${x.falas} falas · ${x.duracao_s}s no total</div>
+    ${x.completo?`<span data-audio-placeholder="${url(x.completo)}"></span>`:""}</div>`).join("");
+  const fl=["Todos",...s.speakers.map(x=>x.speaker)];
+  $("filters").innerHTML=fl.map(k=>`<button class="${k==="Todos"?"":"ghost"}" data-k="${k}">${k==="Todos"?k:"Speaker "+k}</button>`).join("");
+  $("filters").querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    $("filters").querySelectorAll("button").forEach(x=>x.className="ghost");b.className="";
+    document.querySelectorAll(".utt").forEach(u=>u.classList.toggle("hidden",b.dataset.k!=="Todos"&&u.dataset.k!==b.dataset.k));
+  });
+  $("utts").innerHTML=s.clips.map(c=>`<div class="utt" data-k="${c.speaker}"><div class="t">${fmt(c.start)}</div>
+    <div>${tag(c.speaker)}<p>${esc(c.text)}</p><span data-audio-placeholder="${url(c.file)}"></span></div></div>`).join("");
+  $("prod2").value=s.produto||$("prod").value;$("alias2").value=s.produto_aliases||$("alias").value;$("novo2").value=s.produto_novo||$("novo").value;
+  renderFrases(s.frases,s.resumo_frases,s.produto_novo,s.detectado?{...s.detectado}:null,s.metricas,false);
+  $("tcard").classList.remove("hidden");$("tres").innerHTML="";
+  $("pcard").classList.remove("hidden");$("pdet").innerHTML="";$("pres").innerHTML="";$("pdetect").textContent="Detectar preços e kits";PD=null;
+  $("res").classList.remove("hidden");
+  $('srt-correction-result').innerHTML='';$('srt-error').textContent='';
+  wizardReady=true;wizardBusy=false;updateWizard();wizardStep(3);
+  document.dispatchEvent(new CustomEvent('ripagem:project-opened'));
+}
+
+/* Fluxo guiado: reaproveita os controles e os resultados do Fatiador. */
+let wizardReady=false,wizardBusy=false,wizardCurrent=1;
+function updateWizard(){
+  syncTranscriptionFile();
+  document.querySelectorAll('[data-w-step]').forEach(b=>{
+    const n=Number(b.dataset.wStep);b.disabled=wizardBusy || (n>=3&&!wizardReady);
+    b.setAttribute('aria-current',n===wizardCurrent?'step':'false');
+  });
+  document.querySelectorAll('[data-w-next],[data-w-back]').forEach(b=>b.disabled=wizardBusy||(b.dataset.wNext==='2'&&transcriptionBlocked()));
+}
+function wizardStep(n){
+  if(wizardBusy&&n!==2)return;
+  if(n===2&&transcriptionBlocked()&&!wizardBusy){$('wizard-error').textContent='Primeiro, selecione o áudio ou vídeo na etapa Arquivo. O nome do produto não substitui o arquivo.';$('drop').focus();return false;}
+  if(n>=3&&!wizardReady)return;
+  if(n===5){const value=$('novo2').value.trim();$('srt-canonical').value=value===value.toUpperCase()?value.split(/\s+/).map(w=>w.length<=2?w:w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(' '):value;}
+  wizardCurrent=n;
+  document.querySelectorAll('[data-w-panel]').forEach(p=>p.hidden=Number(p.dataset.wPanel)!==n);
+  updateWizard();
+  const heading=$('wizard-title-'+n);heading.focus({preventScroll:true});heading.scrollIntoView({block:'start',behavior:'smooth'});
+}
+function initWizard(){
+  const saved=$('saved-work').closest('.card'),upload=$('drop').closest('section'),prod=document.querySelector('.row.prod');
+  const originalRow=$('lang').closest('.row'),go=$('go'),tutorial=$('tutorial-premiere');
+  const res=$('res'),download=$('dl').closest('.card'),speakers=$('spks');
+  const allHeading=[...res.querySelectorAll('h2')].find(h=>h.textContent==='Todas as falas por speaker');
+  const allCard=allHeading.closest('.card');
+  const exportBox=$('exp-premiere').parentElement;
+  const shell=document.createElement('div');shell.id='guided-fatiador';
+  shell.innerHTML=`<p class="sub">Siga uma etapa por vez. Você pode voltar para conferir sem perder o trabalho.</p>
+    <nav class="wizard-nav" aria-label="Etapas do Fatiador">${['Escolher arquivo','Transcrever','Conferir trocas','Enviar ao Premiere','Corrigir SRT'].map((t,i)=>`<button type="button" class="ghost" data-w-step="${i+1}">${i+1}. ${t}</button>`).join('')}</nav>
+    <p id="wizard-error" role="alert" style="color:var(--err)"></p>
+    ${[
+      ['Escolha o arquivo','Para receber cortes de vídeo e áudio no Premiere, prefira o vídeo original. Também aceitamos áudio.'],
+      ['Prepare e transcreva','Informe os produtos, escolha o trecho e confirme o idioma. A transcrição usa o serviço AssemblyAI configurado no aplicativo.'],
+      ['Confira os trechos que vão mudar','Leia e ouça as frases, confira o produto novo e ajuste a busca se necessário. Preços e kits são opcionais.'],
+      ['Leve as trocas ao Premiere','Gere os arquivos e siga o mini tutorial. A exportação usa os trechos que você conferiu na etapa anterior.'],
+      ['Corrija as legendas sem mudar os tempos','Envie o SRT da versão final. Corrigimos somente o nome do produto e verificamos menções ao produto antigo.']
+    ].map(([title,help],i)=>`<section class="wizard-panel" data-w-panel="${i+1}" ${i?'hidden':''}><h2 id="wizard-title-${i+1}" tabindex="-1">Etapa ${i+1} de 5 · ${title}</h2><p class="meta">${help}</p><div id="wizard-slot-${i+1}"></div><div class="row" style="margin:18px 0">${i?`<button class="ghost" data-w-back="${i}">Voltar</button>`:''}${i===0?'<button data-w-next="2">Continuar para transcrição</button>':i===2?'<button data-w-next="4">Conferi os trechos · ir ao Premiere</button>':i===3?'<button data-w-next="5">Continuar para corrigir o SRT</button>':''}</div></section>`).join('')}`;
+  document.querySelector('h1').after(shell);
+  $('wizard-slot-1').append(saved,upload);
+  // Mantém o arquivo na etapa 1 e mostra apenas os ajustes essenciais na etapa 2.
+  const setup=document.createElement('div');setup.className='card';
+  const langLabel=$('lang').closest('label');setup.append(langLabel,prod);
+  const range=document.createElement('div');range.innerHTML='<label>Parte que será transcrita<select id="transcribe-range"><option value="full">Vídeo inteiro · busca completa</option><option value="half">Segunda metade · busca parcial</option></select></label><p class="meta">Extraímos apenas o áudio, em arquivo leve. Os tempos das frases continuam relativos ao vídeo completo. Ao escolher “Segunda metade”, menções da primeira metade ficam fora da busca.</p>';setup.prepend(range);
+  const advanced=document.createElement('details');advanced.innerHTML='<summary>Configurações avançadas de áudio</summary>';
+  go.remove();advanced.append(originalRow);setup.append(advanced,go);
+  go.textContent='Iniciar transcrição e identificar trechos';
+  $('wizard-slot-2').append(setup,$('prog'));
+  const chosen=document.createElement('p');chosen.id='wizard-chosen';chosen.className='meta';chosen.setAttribute('role','status');setup.prepend(chosen);
+  const fileWarning=document.createElement('div');fileWarning.id='transcription-file-warning';fileWarning.className='card';fileWarning.innerHTML='<p>Para liberar a transcrição, escolha um áudio ou vídeo na etapa 1.</p><button type="button" class="ghost">Escolher arquivo agora…</button>';fileWarning.querySelector('button').onclick=()=>$('file').click();go.before(fileWarning);syncTranscriptionFile();
+  // As informações gerais e todas as falas ficam acessíveis sem poluir a conferência.
+  const extra=document.createElement('details');extra.className='card';extra.innerHTML='<summary>Arquivos completos e falas por pessoa</summary>';extra.append(download,speakers,allCard);
+  const coverage=document.createElement('p');coverage.id='wizard-coverage';coverage.className='card meta';
+  const pricesPanel=document.createElement('details');pricesPanel.className='card';pricesPanel.innerHTML='<summary>Também preciso trocar preços ou kits</summary>';pricesPanel.append($('pcard'));
+  $('wizard-slot-3').append(coverage,$('fcard'),pricesPanel,extra);
+  const alignmentPanel=document.createElement('details');alignmentPanel.className='card';alignmentPanel.innerHTML='<summary>Minha sequência já foi editada · alinhar com SRT</summary>';alignmentPanel.append($('tcard'));
+  $('wizard-slot-4').append(exportBox,alignmentPanel,tutorial);
+  tutorial.open=true;
+  $('wizard-slot-5').innerHTML=`<div class="card">
+    <label>SRT original exportado do Premiere<input type="file" id="srt-original" accept=".srt"></label>
+    <label style="margin-top:12px">Grafia final do produto novo<input type="text" id="srt-canonical" placeholder="Ex.: Golden Brain"></label>
+    <p class="meta">Usamos o produto antigo e suas variações da etapa 3 para localizar menções em todo o SRT. Substituímos pelo nome acima e padronizamos também as menções ao produto novo, como GOLDEN BRAIN ou golden brain. Nenhuma outra frase, valor ou pontuação é corrigida.</p>
+    <p class="meta">Os blocos, timecodes e quebras de linha são preservados. Você verá as menções ao produto antigo encontradas e se alguma ficou pendente. O original não é sobrescrito.</p>
+    <button id="srt-correct" style="margin-top:12px">Conferir e gerar SRT corrigido</button><p id="srt-error" role="alert" style="color:var(--err)"></p><div id="srt-correction-result" aria-live="polite"></div>
+  </div>`;
+
+  $('srt-correct').onclick=async()=>{
+    const button=$('srt-correct');button.disabled=true;$('srt-error').textContent='';$('srt-correction-result').innerHTML='';
+    try{
+      const file=$('srt-original').files[0];
+      if(!file)throw Error('Escolha o arquivo SRT original.');
+      const r=await fetch('/fatiador/corrigir-srt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({folder,product:$('prod2').value,novo:$('srt-canonical').value,aliases:$('alias2').value,nome:file.name,srt:await file.text()})});
+      const d=await r.json();if(!r.ok)throw Error(d.erro);
+      $('srt-correction-result').innerHTML=`<p>${d.mencoes_antigas.length} menção(ões) ao produto antigo encontrada(s). ${d.resquicios.length?"Ainda há nomes antigos para revisar: "+d.resquicios.map(esc).join(", "):"Nenhuma menção restante aos nomes antigos informados."}</p><p>Grafia final: <b>${esc(d.grafia_final)}</b></p><p><b>${d.alterados} bloco(s) corrigido(s) de ${d.blocos}. Todos os timecodes foram preservados.</b></p><div class="links"><a href="${url(d.arquivo)}?dl=1">Baixar SRT corrigido</a><a href="${url(d.relatorio)}?dl=1">Relatório de alterações</a></div><p class="meta">No Premiere: Arquivo → Importar (⌘I), escolha o SRT corrigido e use essa legenda na sequência final. Os tempos permanecem exatamente como no arquivo enviado.</p>${d.pendencias.length?`<details open><summary>${d.pendencias.length} pendência(s) para revisão</summary>${d.pendencias.slice(0,100).map(p=>`<p class="meta">${esc(p.bloco?'Bloco '+p.bloco:'Trecho '+(p.trecho||''))}: ${esc(p.motivo)}</p>`).join('')}</details>`:''}<details open><summary>Conferir antes e depois</summary>${d.alteracoes.slice(0,150).map(a=>`<div style="border-top:1px solid var(--line);padding:10px 0"><b>Bloco ${esc(a.bloco)} · ${esc(a.timecode)}</b><p>Antes: ${esc(a.antes)}</p><p style="color:var(--acc)">Depois: ${esc(a.depois)}</p></div>`).join('')}${d.alteracoes.length>150?'<p>Veja as demais alterações no relatório.</p>':''}</details>`;
+    }catch(e){$('srt-error').textContent=e.message;}finally{button.disabled=false;}
+  };
+  const oldIntro=document.querySelector('main > p.sub');if(oldIntro)oldIntro.hidden=true;
+  shell.querySelectorAll('[data-w-step]').forEach(b=>b.onclick=()=>wizardStep(Number(b.dataset.wStep)));
+  shell.querySelectorAll('[data-w-back]').forEach(b=>b.onclick=()=>wizardStep(Number(b.dataset.wBack)));
+  shell.querySelectorAll('[data-w-next]').forEach(b=>b.onclick=()=>{
+    const n=Number(b.dataset.wNext);
+    if(n===2&&transcriptionBlocked()){$('wizard-error').textContent='Escolha um arquivo ou reabra um trabalho salvo antes de continuar.';return;}
+    if(n===2)transcriptionConfirmed=true;
+    $('wizard-error').textContent='';$('wizard-chosen').textContent=file?'Arquivo escolhido: '+file.name:'';wizardStep(n);
+  });
+  $('drop').tabIndex=0;$('drop').setAttribute('role','button');$('drop').setAttribute('aria-label','Escolher áudio ou vídeo');$('drop').onkeydown=e=>{if(e.target!==$('drop'))return;if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click();}};
+  updateWizard();
+}
+initWizard();
+</script>
+<script src="/static/trocas.js?v=3.10.23"></script>
+<script src="/static/lazy-details.js?v=1"></script>
+<script src="/static/visual-draft.js?v=3.10.19"></script>
+<script src="/static/visuais.js?v=3.10.19"></script>
+<script src="/static/fatiador-ux.js?v=3.10.22"></script>
+<script src="/static/fluxo.js?v=3.10.24"></script>
+<script src="/static/formas.js?v=3.10.10"></script>
+<script src="/static/falas-simples.js?v=3.7.1"></script>
+<script src="/static/fatiador-fluxo-claro.js?v=3.10.17"></script>
+<script src="/static/regenerar-audio.js?v=3.10.17"></script>
+<script src="/static/native-files.js?v=3.10.23"></script>
+<script src="/static/editorial.js?v=3.10.16"></script>
+<script src="/static/studio.js?v=3.10.17"></script>
+<script src="/static/take-resolver.js?v=3.10.19"></script>
+<script src="/static/gemini-formas.js?v=3.10.10"></script>
+<script src="/static/equipe.js?v=3.11.1"></script>
+<script src="/static/entrega-identidade.js?v=3.11.1"></script>
+<script src="/static/primeiro-acesso.js?v=3.7.1"></script>
+<script src="/static/fluxo-pratico.js?v=3.10.22"></script>
+<script src="/static/deteccao-visual.js?v=3.11.0"></script>
+<script src="/static/legendas.js?v=3.10.1"></script>
+<script src="/static/legendas-video.js?v=1"></script>
+<script src="/static/otimizacao.js?v=3.9.0"></script>
+<script src="/static/otimizacao-ofertas.js?v=3.8.3"></script>
+<script src="/static/tarefas-ui.js?v=3.8.0"></script>
+<script src="/static/fatiador-projeto.js?v=3.10.16"></script>
+<script src="/static/graphite.js?v=3.10.23"></script>
+<script src="/static/finalizacao.js?v=3.12.0&o=3.10.23"></script>
+<script src="/static/automatico.js?v=3.10.23"></script>
+<script src="/static/fluxo-guiado.js?v=3.12.0&o=3.11.1"></script>
+<script src="/static/audio-frase.js?v=3.10.7"></script>
+<script src="/static/falas-visuais.js?v=3.10.22"></script>
+<script src="/static/conferencia-visual.js?v=3.11.0"></script>
+<script src="/static/relatorio-ripagem.js?v=3.11.1"></script>
+<script src="/static/conferencia-final.js?v=3.13.0"></script>
+<script src="/static/broll.js?v=3.15.0-r1"></script>
+<link rel="stylesheet" href="/static/studio-layout.css?v=3.15.0-r1">
+<script src="/static/studio-layout.js?v=3.14.0"></script>
+</body>
+</html>

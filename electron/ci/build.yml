@@ -1,0 +1,36 @@
+# Copie para .github/workflows/ripagem-electron.yml quando este projeto estiver no GitHub.
+name: Ripagem Maker Electron
+on: workflow_dispatch
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm, cache-dependency-path: electron/package-lock.json}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r distribuicao/requirements.txt pyinstaller
+      - if: runner.os == 'macOS'
+        run: brew install ffmpeg
+      - run: npm ci
+        working-directory: electron
+      - run: npx install-electron
+        working-directory: electron
+      - if: runner.os == 'macOS'
+        run: python electron/scripts/prepare_engine.py --freeze
+      - run: npm test
+        working-directory: electron
+      - if: runner.os == 'macOS'
+        run: npm run build:mac
+        working-directory: electron
+      - if: runner.os == 'Windows'
+        run: npm run build:windows
+        working-directory: electron
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ripagem-Maker-Electron-${{ runner.os }}
+          path: distribuicao/pacotes/Electron/*

@@ -1,0 +1,18 @@
+Ripagem Maker — Atualização 3.7.2 (Mac e Windows)
+
+Para atualizar o aplicativo já instalado:
+1. Baixe Ripagem-Maker-Atualizacao-3.7.2.zip. Não descompacte.
+2. No Ripagem Maker, abra Ajustes e atualizações.
+3. Escolha o ZIP em Atualizar aplicativo e aplique.
+4. Feche e reabra o aplicativo após terminar as tarefas em execução.
+
+Correções:
+- Ao escolher Otimização no início, somente preços e quantidades dos kits são buscados para trocar. O nome do produto preenchido não ativa a busca de menções nem adaptações de modo de uso.
+- A lista é preenchida depois de informar os valores/quantidades novos; frases sem alterações não entram na geração.
+- Números avulsos como diabetes tipo 2 não viram trechos de troca.
+- Pitch copiado do nome do arquivo (52_22) é normalizado para 52:22. Outros erros aparecem na etapa atual, com acesso para corrigir.
+- Trabalhos anteriores, chaves e arquivos de mídia são preservados. Mudanças de escopo guardam o plano anterior.
+
+Validação: testes de código e interface no Mac, transcrição da GlycoWise reutilizada sem consumo de ASR/TTS. Instalador/execução nativa do Windows não foram testados nesta correção. Este ZIP atualiza o código em ambos os sistemas; não é um instalador completo.
+
+Preencha somente os valores e quantidades que devem mudar e revise as frases de promoções (pague X/leve Y) antes de gerar vozes. A troca numérica não reescreve automaticamente todas as condições comerciais da oferta.

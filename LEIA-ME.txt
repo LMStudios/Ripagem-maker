@@ -1,0 +1,116 @@
+FATIADOR DE SPEAKERS (AssemblyAI)
+
+COMO ABRIR
+  Dê dois cliques em "Abrir Fatiador.command".
+  (Na 1ª vez o macOS pode bloquear: clique com o botão direito > Abrir > Abrir.)
+  O navegador abre em http://localhost:8765. Para fechar o app, feche a janela do Terminal.
+
+COMO USAR
+  1. Arraste o áudio ou vídeo (mp3, wav, m4a, mp4, mov...).
+  2. Escolha o idioma (ou deixe em detectar) e, se souber, o nº de speakers — ajuda a separação.
+  3. Clique em "Transcrever e fatiar".
+
+O QUE SAI (pasta saidas/<nome>_<data>/  + um .zip igual)
+  transcricao_speakers.txt       fala por fala com [tempo] [Speaker X]
+  transcricao_texto_corrido.txt  texto inteiro sem speakers
+  legendas.srt                   legenda com [Speaker X]
+  transcricao_bruta.json         resposta completa do AssemblyAI (palavra por palavra)
+  resumo.json                    lista de falas, tempos e arquivos
+  SPEAKER_A/ , SPEAKER_B/ ...    cada fala cortada:  001_00m12s_inicio_da_frase.mp3
+  SPEAKER_X_TODAS_AS_FALAS.mp3   todas as falas daquele speaker emendadas (bom p/ clonar voz)
+
+AJUSTES
+  Folga no corte (ms): margem antes/depois de cada fala (padrão 120 ms).
+  Ignorar falas menores que (ms): pula "hum", "What?" etc. (padrão 300 ms).
+
+A chave da API fica em .env (ASSEMBLYAI_API_KEY=...). Não compartilhe esse arquivo.
+
+----------------------------------------------------------------------
+BLOCO "FRASES COM O PRODUTO" (troca de potes)
+  O app identifica sozinho o produto original: é o nome que mais se repete no áudio, somando as
+  variações que o reconhecimento errou (ex.: Ritromax / Retromax / Raytramax).
+  - Deixe "Produto original" vazio para a detecção automática, ou digite o nome para forçar.
+  - "Variações" (opcional): grafias erradas que o AssemblyAI gerou. Na detecção automática vêm preenchidas.
+  - "Produto novo" (opcional): o app já mostra cada frase com o nome trocado, pronta para o MiniMax.
+  - "Cortar o áudio de cada frase": gera um mp3 por frase em FRASES_<PRODUTO>/ (001_speakerA_00m10s.mp3).
+  Depois de transcrever, dá para trocar o nome e clicar em "Buscar de novo" (não gasta nova transcrição).
+  Saídas extras: frases_<PRODUTO>.txt (resumo + lista), frases_<PRODUTO>_NOVO_<novo>.txt e frases_<PRODUTO>.json.
+  Resumo no formato: [PRODUTO: X] / Quantas menções / Tempo estimado (1 h a cada 15 frases + 1 h de revisão).
+
+TAMANHO DO TRECHO E SPEAKERS
+  "Tamanho de cada trecho" corta falas longas em pedaços de até N segundos, de preferência no fim de frase.
+  Se "Nº de speakers" ficar vazio, o app pede ao AssemblyAI no mínimo 2 vozes (evita áudio de narrador
+  com depoimentos curtos sair como um speaker só).
+
+----------------------------------------------------------------------
+AUTOMAÇÃO NO PREMIERE (troca de potes)
+  1. No app, no bloco "Alinhar com a timeline do Premiere", envie o .srt da sua sequência e o frame rate.
+     Baixe o premiere_<PRODUTO>.jsx.
+  2. Abra a sequência da VSL no Premiere (ela precisa ser a sequência ATIVA).
+  3. Abra o .jsx no VS Code (extensão "Adobe ExtendScript Debugger" já instalada).
+  4. Na barra azul de baixo, clique em "Eval in Adobe..." e escolha "Adobe Premiere Pro" (premierepro-26.0).
+  5. Rode primeiro com CFG.MODE = "MARCADORES" (só marca). Confira os marcadores.
+     Depois troque para "CORTAR" ou "TROCAR" (TROCAR pede a pasta com os áudios novos 001_..., 002_...).
+  Faça "Salvar como" do projeto antes de CORTAR/TROCAR. Cmd+Z desfaz.
+  Observação: nesta máquina o VS Code rodou um script de leitura no Premiere com sucesso (versão 26.5.2);
+  os modos CORTAR e TROCAR ainda NÃO foram testados dentro do Premiere.
+
+======================================================================
+DR STUDIO — PAINEL E MICROLEAD + BODY (tudo local, sem IA, sem API paga)
+  Abrir: dois cliques em "Abrir Fatiador.command" -> abre o painel em http://localhost:8765
+  O fatiador antigo continua igual em http://localhost:8765/fatiador
+
+MICROLEAD + BODY
+  1. Envie 2 ou mais vídeos (arrastar). Cada um é transcrito NESTE Mac (Whisper MLX na GPU;
+     opção faster-whisper na CPU). Nada vai para a internet.
+  2. Marque um vídeo como Microlead e outro como Body.
+  3. Revise os cortes: o app sugere onde a microlead termina e onde o body começa usando só regras
+     (pausas, pontuação, expressões, faixa de duração). Cada sugestão mostra os pontos e o motivo.
+     Quando as regras não bastam, aparece "Confirme o corte" — escolha uma opção ou arraste o marcador.
+     O corte nunca cai no meio de uma palavra. "Ouvir o corte" toca os segundos em volta.
+  4. "Prévia da emenda" (rápida, 4 s de cada lado) e "Montar vídeo" (arquivo final).
+     Automático: copia sem recodificar quando os vídeos são compatíveis e há keyframe na pausa;
+     senão recodifica num passe só com corte exato. Opções: rápido (hardware do Mac), MOV ProRes p/ edição.
+     Ao final o app confere a duração e o sincronismo áudio/vídeo do arquivo gerado.
+  Confirmar corte: guarda o corte do vídeo para o lote.
+
+LOTE
+  Escolha várias microleads e bodies -> todas as combinações (ou pares). Usa os cortes confirmados;
+  sem confirmação usa a 1ª opção das regras e, por padrão, pausa pedindo revisão quando não é confiável.
+
+REGRAS
+  Menu "Regras de corte": durações, pausas, folgas e as listas de expressões (uma por linha).
+
+ONDE FICAM OS ARQUIVOS
+  plataforma/workspace/videos  -> cópias dos vídeos enviados + transcrição/análise
+  plataforma/workspace/saidas  -> vídeos gerados
+
+----------------------------------------------------------------------
+FATIADOR — TROCA DE PREÇOS E KITS (sem IA)
+  Depois de transcrever, no bloco "Troca de preços e kits":
+  1. "Detectar preços e kits": lista as quantidades (separadas em frascos/potes, kits/pacotes e meses)
+     e os valores ($), com quantas vezes aparecem e um exemplo. Valores de custo/bônus ficam em
+     "Outros valores citados".
+  2. Preencha só o que muda (em branco = mantém). Ex.: 6 frascos -> 5, $49 -> $39.
+     O app avisa se dois kits ficarem com a mesma quantidade.
+  3. "Gerar frases com os valores novos": lista só as frases afetadas, com [Speaker X], o texto novo
+     e o áudio de cada frase (pasta FRASES_PRECOS). Frases com número solto que pode ser do kit
+     ("pay for 3") aparecem com ⚠ para revisar à mão.
+  4. Desmarque frases que não devem mudar e clique em "Atualizar sem as desmarcadas".
+  Arquivos: precos_TROCA.txt (resumo + originais), precos_TROCA_NOVO.txt (com speaker), precos_TROCA.json.
+
+======================================================================
+DR STUDIO.APP — APLICATIVO DO MAC
+  Onde está: "EDIÇÃO DE VÍDEOS (CLAUDE)/Ripagem Maker.app"
+  Abrir: dois cliques (dá para arrastar para a pasta Aplicativos ou para o Dock).
+  Ele liga o motor local sozinho e abre tudo numa janela própria. Fechar a janela ou Cmd+Q
+  desliga o motor e as transcrições/renders em andamento.
+  Atalhos: Cmd+1 Painel · Cmd+2 Microlead+Body · Cmd+3 Lote · Cmd+4 Fatiador · Cmd+5 Regras · Cmd+R recarregar
+  Menu Arquivo: abrir as pastas de vídeos gerados e o registro do motor.
+  Downloads ("Baixar", "Exportar") vão para a pasta Downloads e o Finder mostra o arquivo.
+
+  1ª vez: o macOS pede permissão para o Ripagem Maker acessar a pasta Documentos -> clique em Permitir.
+  Importante: o app usa a pasta APP_TRANSCRICAO_SPEAKERS e o Python deste Mac. Se mover ou renomear
+  essa pasta, gere o app de novo:  APP_TRANSCRICAO_SPEAKERS/mac_app/build_app.sh
+  Ele foi feito para este Mac (não leva Python/Whisper dentro); para outro Mac seria preciso empacotar tudo.
+  Registro do motor: ~/Library/Logs/Ripagem Maker/servidor.log

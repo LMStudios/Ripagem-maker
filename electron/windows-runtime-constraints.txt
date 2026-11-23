@@ -1,0 +1,20 @@
+# Mesmas versões principais verificadas no motor local; wheels Windows x64.
+requests==2.33.1
+numpy==2.4.4
+faster-whisper==1.2.1
+keyring==25.7.0
+ctranslate2==4.8.2
+onnxruntime==1.30.0
+av==18.1.0
+tokenizers==0.23.2
+huggingface-hub==1.31.0
+pyyaml==6.0.3
+protobuf==7.36.1
+# Leitura local do nome nos quadros (produto antigo na imagem).
+rapidocr==3.10.0
+opencv-python-headless==5.0.0.93
+shapely==2.2.0
+pyclipper==1.4.0
+omegaconf==2.4.0
+pillow==12.2.0
+colorlog==6.12.0

@@ -1,0 +1,67 @@
+{
+  "name": "ripagem-maker-electron",
+  "productName": "Ripagem Maker Electron",
+  "version": "4.0.0-beta.20",
+  "description": "Ripagem Maker para macOS e Windows",
+  "author": "Ripagem Maker",
+  "license": "UNLICENSED",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "prepare:engine": "python3 scripts/prepare_engine.py",
+    "build:mac": "npm run prepare:engine && electron-builder --mac zip",
+    "build:windows": "node scripts/build-windows.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0",
+    "resedit": "3.1.0"
+  },
+  "build": {
+    "appId": "local.ripagemmaker.electron",
+    "artifactName": "Ripagem-Maker-3.15.1-Mac-${arch}.${ext}",
+    "directories": {
+      "output": "../distribuicao/pacotes/Electron"
+    },
+    "files": [
+      "*.cjs",
+      "*.html",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../plataforma/static/assets/app-icon.png",
+        "to": "app-icon.png"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "target": [
+        "zip"
+      ],
+      "icon": "icon.icns",
+      "extraResources": [
+        {
+          "from": "engine",
+          "to": "engine"
+        }
+      ],
+      "identity": "-"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "../plataforma/static/assets/app.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true
+    },
+    "beforePack": "./scripts/verify-engine.cjs"
+  }
+}

@@ -1,0 +1,65 @@
+/* Espaço de revisão, com foco nas pendências. */
+main{max-width:1320px;padding-top:22px}h1{font-size:26px;letter-spacing:-.6px}.wizard-nav{position:sticky;top:0;z-index:20;background:var(--bg);padding:12px 0;margin:12px 0 20px;border-bottom:1px solid var(--line);flex-wrap:nowrap;overflow:auto}.wizard-nav button{white-space:nowrap;font-size:13px;flex:1;padding:11px 12px}.wizard-panel>h2{font-size:23px;letter-spacing:-.4px}.card{padding:20px;border-radius:14px}button,input,select{min-height:42px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--acc);outline-offset:3px}button:disabled{opacity:.55}input[type=checkbox]{min-height:16px}label:has(>input[type=checkbox]){flex-direction:row!important;justify-content:flex-start;gap:6px;text-align:left}summary{cursor:pointer;font-weight:650;padding:6px 0}.ux-summary{position:sticky;top:68px;z-index:12;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 4px 18px #0000000a}.ux-summary-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.ux-summary strong{font-size:17px}.ux-stats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.ux-stat{font-size:12px;border-radius:7px;background:var(--bg);padding:5px 9px}.ux-stat.warning{color:var(--err)}.ux-status{font-size:12px;color:var(--mute)}.ux-status.dirty{color:var(--err)}.ux-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}.ux-toolbar button{font-size:12px;padding:8px 12px}.ux-toolbar button[aria-pressed=true]{background:var(--acc);color:white}.ux-workspace{display:grid;grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:start;margin:16px 0}.ux-list{position:sticky;top:205px;max-height:65vh;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)}.ux-list button{display:block;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;color:var(--ink);font-weight:400;padding:14px}.ux-list button[aria-current=true]{background:color-mix(in srgb,var(--acc) 14%,var(--card));box-shadow:inset 3px 0 var(--acc)}.ux-list small{display:block;color:var(--mute);margin:4px 0}.ux-list .ux-row-status{font-size:11px;font-weight:650;color:var(--acc)}#flist>.card{margin-top:0!important}#flist> .card>p{font-size:15px;line-height:1.65}#swap-controls h3{margin-top:0}#swap-speakers .card{margin-bottom:0}.ux-empty{text-align:center;padding:35px;color:var(--mute)}.ux-profile{border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}.ux-profile .row{margin-top:8px}.ux-profile input,.ux-profile select{min-width:140px;max-width:100%}.ux-profile p{margin-bottom:0}.ux-preview video{width:100%;max-height:480px;background:#000;border-radius:10px}.ux-preview{margin:15px 0}.ux-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.ux-tabs button{font-size:12px;padding:8px 12px}.ux-delivery{background:color-mix(in srgb,var(--acc) 5%,var(--card));border-color:var(--acc)}.ux-delivery h3{margin-top:0}.ux-delivery select{width:100%;max-width:600px}.ux-shortcuts{font-size:12px;color:var(--mute)}#swap-voices{scroll-margin-top:200px}#visual-panel{scroll-margin-top:200px}.ux-collapsed-audio summary{font-size:12px;color:var(--mute)}.ux-collapsed-audio{margin:10px 0}#swap-save{background:transparent;border:1px solid var(--line);color:var(--acc)}#swap-summary{display:none}#swap-batch-result:empty,#swap-error:empty{display:none}.ux-toast{padding:10px;border-left:3px solid var(--acc);margin:10px 0}.ux-section-help{max-width:800px}#wizard-coverage{padding:12px 16px}.ux-result{border:1px solid var(--acc);border-radius:12px;padding:14px}.ux-path{overflow-wrap:anywhere}
+@media(max-width:850px){.ux-workspace{grid-template-columns:220px minmax(0,1fr)}.ux-summary{position:static}.ux-list{top:75px}.card{padding:15px}.wizard-nav button{flex:none}.ux-summary-top{align-items:flex-start;flex-direction:column}}
+@media(max-width:620px){.ux-workspace{display:block}.ux-list{position:static;max-height:230px;margin-bottom:14px}.ux-summary strong{font-size:15px}main{padding:16px 12px 60px}.wizard-panel>h2{font-size:20px}.ux-toolbar{gap:5px}.ux-toolbar button{font-size:11px}.row>label{max-width:100%}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+/* Takes e prévia são etapas do fluxo principal. */
+.flow-panel>h2{scroll-margin-top:80px}.flow-automation{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,var(--card))}.flow-takes-main>summary{display:none}.flow-takes-main{margin-top:14px}.flow-choice{padding:14px}.flow-take-options{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}.flow-take-line{display:flex;gap:10px;align-items:end;margin-bottom:10px;flex-wrap:wrap}.flow-take-line label{flex:1;min-width:220px}.flow-take-line select{width:100%}.flow-blocker{border-left:3px solid var(--err);padding:8px 12px;background:var(--bg)}.flow-blocker button{font-size:12px;padding:6px 10px}#flow-preview-player video{background:#000;border-radius:10px}#flow-preview-progress{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:10px}#flow-preview-approved{min-width:16px}.flow-panel .row{margin-bottom:20px}#flow-no-takes{min-width:16px}.flow-takes-main details>button{margin:8px 8px 8px 0}
+
+/* Geração de voz é uma etapa principal e fica sempre expandida. */
+.ux-speech-stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 18px}.ux-speech-stages button{padding:13px 10px;text-align:left;font-size:13px}.ux-speech-stages span{display:block;font-size:12px;margin-bottom:3px;opacity:.8}.ux-voice-stage{border:2px solid var(--acc);scroll-margin-top:220px;background:color-mix(in srgb,var(--acc) 4%,var(--card))}.ux-stage-label{font-size:12px;color:var(--acc);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:0 0 12px}.ux-voice-stage h3{font-size:21px;margin:0 0 10px}.ux-voice-stage #swap-voices{scroll-margin-top:220px}@media(max-width:620px){.ux-speech-stages{grid-template-columns:1fr}.ux-speech-stages span{display:inline;margin-right:8px}.ux-voice-stage{scroll-margin-top:90px}}
+
+/* Smaller screens keep the active task visible; detailed take choices open on demand. */
+.wizard-nav button[data-state=ready]:not([aria-current=step]){border-color:color-mix(in srgb,var(--acc) 55%,var(--line))}
+.wizard-nav button[data-state=ready]:not([aria-current=step])::after{content:" ✓";color:var(--acc)}
+.flow-take-options>summary{font-size:13px;color:var(--acc)}
+.flow-take-options[open]>.flow-take-line:first-of-type{margin-top:12px}
+.flow-automation>p,.flow-choice>p{max-width:900px}
+.flow-take-line video,.flow-take-line img{border-radius:8px;background:#111}
+#flow-preview-player:empty,#flow-delivery-result:empty{display:none}
+input,textarea,select{max-width:100%;box-sizing:border-box}progress{accent-color:var(--acc)}
+@media(max-height:800px){.ux-summary{position:static}.ux-list{top:80px;max-height:60vh}.ux-voice-stage,#swap-voices,#visual-panel{scroll-margin-top:90px}}
+@media(max-width:620px){.flow-take-line label{min-width:0;flex-basis:100%}.flow-panel .row>button{flex:1 1 100%}.wizard-nav{gap:6px}.wizard-nav button{padding:10px}.ux-speech-stages button{min-height:42px}}
+
+/* Falas has three real views; the summary must never cover the current controls. */
+.ux-summary{position:static!important;box-shadow:none;padding:14px 18px}
+.ux-summary .row,.ux-summary>p.ux-stat{display:none}
+.ux-stats{margin-bottom:6px}.ux-summary .ux-status{white-space:nowrap}
+.ux-speech-stages{scroll-margin-top:85px}
+.ux-speech-stages button[aria-current=step]{background:var(--acc);color:var(--acc-ink,#fff);border-color:var(--acc)}
+.ux-voice-stage{border:1px solid var(--line);background:var(--card);scroll-margin-top:90px}
+.ux-voice-stage[hidden],#fcard[hidden]{display:none!important}
+.ux-voice-stage .ux-stage-label{display:none}.ux-voice-stage #swap-voices{scroll-margin-top:90px}
+.ux-form-notice{border-left:3px solid var(--acc);padding:12px 16px;margin:14px 0;background:var(--bg);border-radius:8px}
+.ux-form-notice p{margin-top:0}.ux-form-notice[hidden]{display:none}
+#swap-inline-progress [role=alert]:empty{display:none}
+.ux-summary>.links{display:none}
+
+.product-form{margin:0 0 18px;border-color:var(--acc)}.product-form h3{margin-top:0}.product-form .row>label{flex:1;min-width:180px}.product-form select,.product-form input:not([type=checkbox]){width:100%}.product-form details{margin:12px 0}.product-form #form-apply{margin-top:12px}
+
+.voice-brief h3{margin:0 0 8px;font-size:22px}.voice-brief p{margin:8px 0 14px}.voice-brief #voice-last-result:empty{display:none}
+#voice-settings{border-top:1px solid var(--line);margin-top:22px;padding-top:10px;scroll-margin-top:90px}#voice-settings>summary{color:var(--acc);font-size:14px}
+#voice-settings #swap-voices>h3{display:none}#voice-settings #swap-voices{margin-top:18px}
+#voice-advanced,.voice-help{border-top:1px solid var(--line);margin-top:18px;padding-top:8px}#voice-advanced .ux-toast{border-left:0;padding-left:0}
+#swap-status{padding:10px 16px;border-radius:8px;margin:8px 0;font-size:13px}#swap-status p{margin:4px 0}#swap-status.hidden{display:none}
+#ux-voice-gate[hidden]{display:none}#voice-next[hidden]{display:none}.voice-brief+#swap-inline-progress{margin-top:14px}
+#wizard-slot-3:has(#speech-generate[aria-current=step])>details{display:none}
+#wizard-slot-3:has(#speech-generate[aria-current=step]) #ux-window{display:none}
+#wizard-slot-3:has(#speech-listen[aria-current=step]) .product-form{display:none}
+/* Arraste de gravações locais, com a mesma indicação no editor e na lista. */
+[data-ux-row].phrase-audio-over,[data-swap-row].phrase-audio-over{outline:2px dashed var(--acc);outline-offset:-4px;background:color-mix(in srgb,var(--acc) 16%,var(--card));box-shadow:inset 0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)}
+.phrase-import-help{margin:12px 0 6px}.phrase-import-status{border-left:3px solid var(--acc);padding:10px 14px;margin:8px 0 14px;background:var(--card);border-radius:8px;overflow-wrap:anywhere}
+/* Players compartilham um único áudio; nenhum arquivo carrega ao montar a lista. */
+.review-audio{display:block;width:100%;margin:10px 0;min-width:0}
+.review-audio-controls{display:flex;align-items:center;gap:12px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.review-audio-controls button{flex:0 0 auto;min-width:82px;min-height:36px;padding:6px 10px}
+.review-audio-controls input[type=range]{flex:1;min-width:40px;width:auto;padding:0;height:24px;min-height:0;margin:0;accent-color:var(--acc);cursor:pointer}
+.review-audio-time{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.review-audio-status{display:block;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.review-audio-status:empty{display:none}
+.review-audio>a{font-size:12px}.review-audio [hidden]{display:none!important}
+@media(max-width:480px){.review-audio-controls{gap:6px;padding:6px}.review-audio-controls button{min-width:68px}.review-audio-time{font-size:11px}}
+.audio-regenerate{margin:16px 0}.audio-regenerate>p:empty{display:none}
+.audio-regenerate-confirm{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.audio-regenerate-confirm[hidden],.audio-regenerate-consent[hidden]{display:none!important}
+.audio-regenerate-consent{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:10px;margin:12px 0}
+.audio-regenerate-consent input[type=checkbox]{flex:0 0 auto;width:auto;min-height:0;margin-top:4px}

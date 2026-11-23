@@ -1,0 +1,31 @@
+RIPAGEM MAKER — versão para compartilhar
+
+1. Extraia TODO o ZIP em uma pasta local onde você possa gravar arquivos.
+   Não execute dentro do ZIP, em Program Files ou em uma pasta somente leitura.
+2. Instale Python 3.12 de 64 bits: https://www.python.org/downloads/
+   Windows: marque “Add Python to PATH”.
+3. Instale FFmpeg com ffprobe:
+   Windows, no Terminal: winget install --id Gyan.FFmpeg -e
+   Mac, se já tiver Homebrew: brew install ffmpeg
+   Feche o terminal depois da instalação para atualizar o PATH.
+4. Mac: abra “Abrir Ripagem Maker.command”.
+   Windows: abra “Abrir Ripagem Maker.cmd”.
+5. A primeira abertura baixa dependências Python; precisa de internet e pode demorar.
+   O navegador abre o app local. Mantenha o terminal aberto durante o uso.
+   Ctrl+C encerra o servidor. Não feche enquanto estiver processando.
+
+Uso
+- Em Ajustes, escolha a pasta principal dos seus arquivos.
+- Cada pessoa informa suas próprias chaves de API dentro da ferramenta.
+- Transcrição local baixa modelos na primeira utilização (pode ocupar vários GB).
+- Mac Apple Silicon: MLX/GPU. Windows e Mac Intel: faster-whisper/CPU.
+- Vozes externas e transcrição por API exigem conta própria e podem consumir créditos.
+- Nenhuma chave, configuração pessoal, vídeo ou trabalho do autor acompanha o pacote.
+- Os XMLs devem permanecer com suas mídias nos caminhos indicados. Não mova/apague
+  arquivos depois de importar no Premiere.
+
+Estes pacotes contêm iniciadores .command/.cmd e o código do aplicativo.
+Não são instaladores autossuficientes nem um .exe Windows compilado.
+Mac: o sistema pode pedir autorização para abrir um script baixado.
+Windows: pacote preparado no Mac; validar em um PC antes de uso em produção.
+Não há assinatura comercial ou notarização destes iniciadores.

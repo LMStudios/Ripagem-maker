@@ -1,0 +1,57 @@
+/* Menos decisões por tela; ações locais automáticas, geração paga sempre explícita. */
+(()=>{
+ const U=window.SwapUX,$=id=>document.getElementById(id);if(!U)return;
+ const make=(tag,cls,html)=>{const n=document.createElement(tag);n.className=cls;n.innerHTML=html;return n;};
+ const clock=s=>Math.floor(s/60).toString().padStart(2,'0')+':'+String(Math.floor(s)%60).padStart(2,'0');
+ const settings=make('details','card practical-take-config','<summary>Configurações dos takes</summary><p class="meta">Associação aos kits, ofertas em meses e escolhas por menção. Abra somente se precisar ajustar.</p>');settings.id='practical-take-config';$('flow-takes-content').append(settings);
+ for(const id of ['visual-assets','visual-months','visual-mentions','studio-take-options'])if($(id))settings.append($(id));
+ const visual=$('visual-panel');[...visual.children].filter(n=>n.tagName==='DETAILS').forEach(n=>{n.open=false;settings.append(n);});visual.querySelectorAll('h4').forEach(n=>n.hidden=true);$('visual-root').placeholder='Selecione a pasta dos materiais neste computador';
+ document.addEventListener('click',e=>{if(e.target.closest('#takes-resolve-materials,[data-resolve-materials]'))settings.open=true;});
+ const delivery=$('flow-delivery-result').closest('section'),slot=$('wizard-slot-4');slot.prepend(delivery);delivery.querySelector('h3').textContent='XML para o Premiere';
+ const generateXML=make('button','','Gerar XML sem assistir à prévia');generateXML.id='practical-generate-xml';$('flow-delivery-result').before(generateXML);
+ const quickContainer=$('flow-quick').closest('section'),quickAction=$('flow-quick').onclick;
+ generateXML.onclick=async()=>{delivery.append($('flow-quick-progress'),$('flow-quick-feedback'));await quickAction();};
+ $('flow-quick').onclick=async()=>{quickContainer.append($('flow-quick-progress'),$('flow-quick-feedback'));await quickAction();};
+ const xmlState=()=>{generateXML.disabled=$('flow-quick').disabled;generateXML.hidden=!!$('flow-delivery-result').querySelector('a[href]');};new MutationObserver(xmlState).observe($('flow-delivery-result'),{childList:true,subtree:true});new MutationObserver(xmlState).observe($('flow-quick'),{attributes:true,attributeFilter:['disabled']});xmlState();const music=$('editorial-music');music.open=true;delivery.after(music);
+ const identity=$('delivery-pitch-finish')?.closest('.delivery-identity');if(identity){const d=make('details','card','<summary>Identificação e nome do XML</summary>');identity.before(d);d.append(identity);}
+ const validation=document.querySelector('.studio-validation');if(validation)validation.hidden=true;
+ const audioAudit=$('swap-review');audioAudit.disabled=true;audioAudit.closest('.card')?.setAttribute('hidden','');
+ for(const card of $('wizard-slot-5').children)if(card.querySelector('h3')?.textContent==='Conferência do áudio final')card.hidden=true;
+ $('wizard-title-4').textContent='Entrega da ripagem';const tab=document.querySelector('[data-flow-step="6"]');tab.textContent='6. Entrega';
+ $('wizard-slot-5').prepend(make('section','card','<h3>Validação do produto pela legenda</h3><p>Envie o SRT final. Vamos padronizar o nome novo e procurar resíduos do produto antigo, preservando todos os timecodes. Esta conferência avalia a legenda enviada; não verifica imagens nem comprova ausência de erros no áudio.</p>'));
+ const files=make('section','practical-files','<button type="button" class="ghost" id="practical-open-audio">Abrir pasta dos áudios</button><button type="button" class="ghost" id="practical-copy-audio">Copiar caminho</button><p id="practical-audio-path" class="meta" role="status"></p>');$('swap-controls').before(files);let audioPath='';
+ $('practical-open-audio').onclick=async e=>{e.target.disabled=true;try{const r=await fetch('/open/'+encodeURIComponent(folder)+'/trocas/encaixados'),d=await r.json();if(!r.ok)throw Error(d.erro||'Não foi possível abrir.');audioPath=d.pasta||d.arquivo||d.path||d.caminho||audioPath;$('practical-audio-path').textContent=audioPath||'Pasta dos áudios abertos no gerenciador de arquivos.';}catch(error){$('practical-audio-path').textContent=error.message+(audioPath?' · '+audioPath:'');}finally{e.target.disabled=false;}};
+ $('practical-copy-audio').onclick=async()=>{try{if(!audioPath)throw Error('Abra um trabalho e aguarde o caminho carregar.');await navigator.clipboard.writeText(audioPath);$('practical-audio-path').textContent='Caminho copiado: '+audioPath;}catch(e){$('practical-audio-path').textContent=e.message+(audioPath?' · '+audioPath:'');}};
+ const partial=make('section','practical-partial','<b>Continuar com um lote parcial</b><p class="meta" id="practical-partial-count"></p><div class="links"><button id="practical-retry">Gerar somente os que faltam</button><button id="practical-available" class="ghost">Continuar com os áudios disponíveis</button></div><section id="practical-partial-confirm" hidden><p id="practical-partial-warning" role="alert"></p><button id="practical-confirm-partial">Confirmar entrega parcial</button><button id="practical-cancel-partial" class="ghost">Manter todas as falas</button></section><p id="practical-partial-status" role="status" class="meta"></p>');partial.hidden=true;$('ux-voice-stage').append(partial);
+ $('practical-retry').onclick=()=>{$('swap-regenerate').checked=false;U.generate(true);};
+ $('practical-available').onclick=()=>{const selected=U.plan.itens.filter(r=>r.aprovado),available=selected.filter(r=>r.audio?.fit);$('practical-partial-warning').textContent='Continuar com '+available.length+' de '+selected.length+' áudios? As falas sem áudio sairão da seleção desta entrega. Textos e arquivos permanecem no trabalho e podem ser selecionados novamente.';$('practical-partial-confirm').hidden=false;};
+ $('practical-cancel-partial').onclick=()=>{$('practical-partial-confirm').hidden=true;};
+ $('practical-confirm-partial').onclick=async()=>{
+  const available=U.plan.itens.filter(r=>r.aprovado&&r.audio?.fit),missing=U.plan.itens.filter(r=>r.aprovado&&!r.audio?.fit);if(U.busy||!available.length)return;
+  $('practical-partial-confirm').hidden=true;
+  $('practical-available').disabled=true;try{if(await U.flushDraft()===false||U.hasDraft())throw Error('Aguarde o salvamento dos textos.');const d=await U.call('salvar',{itens:U.capture().map(r=>({...r,aprovado:r.aprovado&&!missing.some(m=>m.id===r.id)}))});U.acceptPlan(d);$('speech-listen').click();document.dispatchEvent(new CustomEvent('swap:audio-approved'));}catch(e){$('practical-partial-status').textContent=e.message;}finally{$('practical-available').disabled=false;}
+ };
+ const sampleStatus=make('p','meta','');sampleStatus.id='practical-samples-status';sampleStatus.setAttribute('role','status');$('swap-samples').before(sampleStatus);
+ let sampleAttempt='',preparing=false,prefTimer,restoring=false,scope='',pitchBusy=false,pitchAgain=false;
+ const currentScope=()=>JSON.stringify([folder,U.plan?.itens.filter(r=>r.aprovado).map(r=>r.speaker).sort()]);
+ async function samples(){
+  if(!U.plan||U.busy||preparing||$('speech-generate').getAttribute('aria-current')!=='step')return;
+  const key=currentScope();if(sampleAttempt===key)return;sampleAttempt=key;preparing=true;sampleStatus.textContent='Preparando amostras locais dos speakers…';
+  try{const d=await U.call('amostras-automaticas');if(d.job)U.startJob(d.job);else sampleStatus.textContent='Amostras prontas. Ouça e confirme os speakers antes de gerar.';}catch(e){sampleStatus.textContent=e.message+' Use Preparar amostras locais para tentar novamente.';}finally{preparing=false;}
+ }
+ function sync(){
+  const listening=$('speech-listen').getAttribute('aria-current')==='step',generating=$('speech-generate').getAttribute('aria-current')==='step';files.hidden=!listening;
+  const selected=U.plan?.itens.filter(r=>r.aprovado)||[],available=selected.filter(r=>r.audio?.fit),missing=selected.length-available.length;
+  partial.hidden=!generating||U.busy||!missing||!available.length;$('practical-partial-count').textContent=available.length+' de '+selected.length+' áudios disponíveis. '+missing+' falas sem áudio podem ser geradas novamente ou retiradas desta entrega.';$('practical-retry').disabled=U.busy;$('practical-available').disabled=U.busy;
+  if(generating)queueMicrotask(samples);
+ }
+ async function persist(){if(restoring||!U.plan||U.busy)return;const work=folder;try{await U.call('preferencias-voz',{salvar:true,config:U.voiceOptions()});if(folder===work)sampleStatus.textContent='Preferências salvas. Autorizações valem para estes speakers, amostras e serviço.';}catch(e){sampleStatus.textContent='Não foi possível salvar as preferências: '+e.message;}}
+ $('swap-voices').addEventListener('change',e=>{if(e.target.matches('#swap-provider,#swap-model,#swap-consent,#swap-send,#swap-delete,#swap-autofit,[data-swap-voice]')){if(e.target.matches('[data-swap-voice]')){$('swap-consent').checked=false;$('swap-send').checked=false;}clearTimeout(prefTimer);prefTimer=setTimeout(persist,250);}});
+ const pitchCard=make('section','practical-pitch','<h3>Pitch da oferta de seis potes</h3><p id="practical-pitch-state" role="status">Identificando pela transcrição já disponível…</p><p id="practical-pitch-quote" class="meta"></p><button class="ghost" id="practical-pitch-edit">Confirmar ou corrigir horário</button>');document.querySelector('.studio-summary').after(pitchCard);
+ $('practical-pitch-edit').onclick=()=>{const box=$('delivery-pitch-start')||document.querySelector('[id^="delivery-pitch-"]');if(!box)return;for(let parent=box.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;document.querySelector('[data-flow-step="1"]').click();setTimeout(()=>{box.focus();box.scrollIntoView({block:'center'});},250);};
+ async function pitch(){if(!U.plan)return;if(pitchBusy){pitchAgain=true;return;}pitchBusy=true;const work=folder;try{const d=await U.call('pitch-transcricao');if(folder!==work)return;document.dispatchEvent(new CustomEvent('ripagem:pitch-ready'));const p=d.atual;const message=$('practical-pitch-state');if(p){message.textContent='Pitch na transcrição: '+clock(d.pitch.tempo)+' · '+p.valor+(p.confirmar?' · A fala foi regravada: confirme o horário final.':' · Na montagem atual: '+clock(p.tempo));$('practical-pitch-quote').textContent=d.pitch.contexto||d.pitch.texto;}else{message.textContent='Pitch para confirmar. Não encontramos um preço com contexto suficiente de seis potes.';$('practical-pitch-quote').textContent=(d.candidatos||[]).length+' candidatos para revisar; valores isolados não definem o pitch.';} }catch(e){$('practical-pitch-state').textContent=e.message;}finally{pitchBusy=false;if(pitchAgain){pitchAgain=false;setTimeout(pitch,300);}}}
+ let pitchTimer;
+ document.addEventListener('swap:render',async()=>{sync();if(scope!==folder){scope=folder;sampleAttempt='';audioPath='';try{const d=await U.call('pasta-audios');if(scope===folder){audioPath=d.pasta;$('practical-audio-path').textContent=audioPath;}}catch(e){$('practical-audio-path').textContent=e.message;}}clearTimeout(pitchTimer);pitchTimer=setTimeout(pitch,350);});
+ document.addEventListener('swap:state',sync);document.addEventListener('swap:finished',e=>{if(e.detail.kind==='amostras')sampleStatus.textContent=e.detail.status==='concluido'?'Amostras preparadas. Ouça e confirme os speakers.':'Preparo interrompido. Use Preparar amostras locais para tentar novamente.';sync();});for(const id of ['speech-texts','speech-generate','speech-listen'])$(id).addEventListener('click',sync);
+ sync();
+})();

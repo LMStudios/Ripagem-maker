@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entrar no Ripagem Maker</title>
+<link rel="icon" type="image/png" href="/static/assets/app-icon.png">
+<link rel="stylesheet" href="/static/app.css?v=3.3.0">
+<link rel="stylesheet" href="/static/graphite.css?v=3.8.2">
+<link rel="stylesheet" href="/static/equipe.css?v=3.11.1">
+<script src="/static/equipe.js?v=3.11.1" defer></script>
+</head>
+<body class="equipe-acesso">
+<main class="equipe-acesso-card">
+  <header class="equipe-marca">
+    <img src="/static/assets/app-icon.png" alt="" width="42" height="42">
+    <span>Ripagem Maker</span>
+  </header>
+  <h1 id="equipe-titulo">Entre na sua conta</h1>
+  <p id="equipe-ajuda" class="equipe-detalhe">Use o e-mail cadastrado pela sua equipe.</p>
+  <form id="equipe-login">
+    <label>E-mail<input id="equipe-email" type="email" name="email" autocomplete="username" maxlength="254" required></label>
+    <label>Senha<input id="equipe-senha" type="password" name="senha" autocomplete="current-password" maxlength="256" required></label>
+    <button type="submit">Entrar</button>
+  </form>
+  <form id="equipe-recuperacao" hidden>
+    <label>E-mail<input id="equipe-recuperar-email" type="email" name="email" autocomplete="email" maxlength="254" required></label>
+    <button type="submit">Enviar código</button>
+  </form>
+  <form id="equipe-confirmacao" hidden>
+    <label>E-mail<input id="equipe-confirmar-email" type="email" name="email" autocomplete="email" maxlength="254" required></label>
+    <label>Código recebido por e-mail<input id="equipe-codigo" type="text" name="codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,10}" title="Use os dígitos recebidos por e-mail." maxlength="10" required></label>
+    <label>Nova senha<input id="equipe-nova-senha" type="password" name="nova_senha" autocomplete="new-password" maxlength="256" required></label>
+    <button type="submit">Salvar senha</button>
+  </form>
+  <div id="equipe-links" class="equipe-links">
+    <button class="ghost" type="button" id="equipe-esqueci">Esqueci minha senha</button>
+    <button class="ghost" type="button" id="equipe-convite">Tenho um convite</button>
+    <button class="ghost" type="button" id="equipe-voltar" hidden>Voltar para o login</button>
+  </div>
+  <p id="equipe-mensagem" class="equipe-detalhe" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>

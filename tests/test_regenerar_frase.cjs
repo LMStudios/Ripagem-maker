@@ -1,0 +1,19 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
+function setup(){
+ const source=fs.readFileSync('plataforma/static/trocas.js','utf8');const code=source.slice(source.indexOf('  let regeneratingOne=false;'),source.indexOf("  el('swap-regenerate').onchange=readiness;"));
+ const nodes={'swap-provider':{value:'elevenlabs'},'swap-model':{value:'eleven_v3'},'swap-delete':{checked:false},'swap-autofit':{checked:true}};
+ const scope={busy:false,jobContext:{},folder:'project',currentJob:null,plan:{itens:[{id:'one',speaker:'A',aprovado:true,audio:{raw:'old.mp3'}},{id:'two',speaker:'B',aprovado:true}]},voices:{},calls:[],status:{classList:{add(){}}},inlineProgress:{classList:{add(){}}},el:id=>nodes[id],qa:()=>[{dataset:{swapVoice:'A'},value:'voice_A'},{dataset:{swapVoice:'B'},value:'invalid_unrelated_voice'}],window:{SwapUX:{flushDraft:async()=>true,hasDraft:()=>false}},save:async()=>{},setBusy(v){scope.busy=v},voiceProgress(){},call:async(name,data)=>{scope.calls.push({name,data});return{id:'test'}},startJob(job,context){scope.currentJob=job.id;scope.context=context}};
+ vm.createContext(scope);vm.runInContext(code,scope);return scope;
+}
+test('regeneração individual envia só o ID e a voz escolhidos, sem regenerar o lote',async()=>{const s=setup();await s.regenerateOne('one',{autoriza_envio:true});assert.equal(s.calls.length,1);assert.equal(s.calls[0].name,'regenerar-frase');assert.equal(s.calls[0].data.id,'one');const o=s.calls[0].data.options;assert.deepEqual(Array.from(o.row_ids),['one']);assert.deepEqual(Object.keys(o.voices),['A']);assert.equal(o.regenerar,true);assert.equal(o.somente_pendentes,false);assert.equal(s.context.origin,'audio-regenerate');assert.equal(s.context.previousRaw,'old.mp3')});
+test('sem confirmação de créditos não faz requisição de geração',async()=>{const s=setup();await assert.rejects(s.regenerateOne('one'),/consumo de créditos/);assert.equal(s.calls.length,0);assert.equal(s.busy,false)});
+test('clique duplicado não cria duas solicitações',async()=>{const s=setup();let resolve;s.save=()=>new Promise(r=>resolve=r);const first=s.regenerateOne('one',{autoriza_envio:true});await Promise.resolve();await Promise.resolve();await assert.rejects(s.regenerateOne('one',{autoriza_envio:true}),/Aguarde/);resolve();await first;assert.equal(s.calls.length,1)});
+test('falha ao iniciar permite tentar novamente sem apagar arquivo anterior',async()=>{const s=setup();s.call=async()=>{throw Error('sem conexão')};await assert.rejects(s.regenerateOne('one',{autoriza_envio:true}),/sem conexão/);assert.equal(s.busy,false);assert.equal(s.plan.itens[0].audio.raw,'old.mp3')});
+test('a regeneração individual não navega para geração em lote ao terminar',()=>{const s=fs.readFileSync('plataforma/static/fatiador-fluxo-claro.js','utf8');assert.match(s,/\['audio-import','audio-regenerate'\]\.includes\(e\.detail\.origin\)/)});
+test('restaurar preferências não perde IDs de voz antes de redesenhar a frase',async()=>{
+ const source=fs.readFileSync('plataforma/static/trocas.js','utf8');const code=source.slice(source.indexOf('  async function restoreVoicePreferences(){'),source.indexOf('  function voiceFailureGroups(rows){'));
+ const inputs=[{dataset:{swapVoice:'A'},value:''}],nodes={'swap-provider':{},'swap-model':{}};const scope={voices:{},call:async()=>({provider:'elevenlabs',model:'eleven_v3',voices:{A:'saved_voice_A'}}),el:id=>nodes[id],qa:()=>inputs,providerChange(){scope.voices={};inputs[0].value=''}};
+ vm.createContext(scope);vm.runInContext(code,scope);await scope.restoreVoicePreferences();assert.equal(inputs[0].value,'saved_voice_A');assert.equal(scope.voices.A,'saved_voice_A');
+});
+
+test('loading individual não abre o painel de geração em lote',()=>{const s=fs.readFileSync('plataforma/static/studio.js','utf8');assert.match(s,/\['audio-import','audio-regenerate'\]\.includes\(j.origin\)/)});

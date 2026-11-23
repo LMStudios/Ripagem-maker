@@ -1,0 +1,105 @@
+/* Layout de estúdio da troca de potes: etapas à esquerda, cabeçalho de uma linha,
+   área de trabalho e barra de ação fixa. Só apresentação: a lógica continua nos scripts. */
+body.sl-on{--sl-rail:214px;--sl-bar:64px;--sl-head:56px}
+body.sl-on main{max-width:none!important;margin:0!important;padding:0!important}
+body.sl-on main > a,body.sl-on main > h1,body.sl-on main > p.sub,body.sl-on #guided-fatiador > p.sub{display:none!important}
+
+/* Cabeçalho */
+.sl-head{position:fixed;top:0;left:0;right:0;height:var(--sl-head);display:flex;align-items:center;gap:12px;padding:0 18px;
+  background:var(--bg,#111216);border-bottom:1px solid var(--line,#2c303b);z-index:40}
+.sl-head .sl-brand{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none;font-weight:600;white-space:nowrap}
+.sl-head .sl-brand i{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#6d5dfc,#8b5cf6);display:inline-block}
+.sl-head .sl-project{color:var(--mute,#afb4c3);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.sl-head .sl-project b{color:inherit;font-weight:600}
+.sl-head button,.sl-head a.sl-link{white-space:nowrap;font-size:13px;padding:7px 12px;min-height:0}
+.sl-head a.sl-link{color:var(--mute,#afb4c3);text-decoration:none}
+.sl-head a.sl-link:hover{color:inherit}
+.sl-head .graphite-help{display:flex;align-items:center;gap:10px;margin:0!important;padding:0!important;border:0!important;background:none!important}
+.sl-head .graphite-help *{margin:0!important}
+.sl-head .equipe-conta{margin:0!important}
+.sl-head #ov-next{margin:0!important;padding:4px 6px 4px 12px!important;border-radius:999px!important;display:flex;gap:8px;align-items:center;max-width:420px}
+.sl-head #ov-next[hidden]{display:none!important}
+.sl-head #ov-next > div{display:flex;align-items:center;gap:6px;min-width:0}
+.sl-head #ov-next #ov-next-title{font-size:12px;color:var(--mute,#afb4c3);font-weight:500;white-space:nowrap}
+.sl-head #ov-next #ov-next-detail{display:none}
+.sl-head #ov-next button{padding:5px 12px;font-size:12.5px}
+
+/* Etapas */
+.sl-rail{position:fixed;top:var(--sl-head);bottom:0;left:0;width:var(--sl-rail);border-right:1px solid var(--line,#2c303b);
+  background:#15161b;padding:14px 10px;overflow:auto;z-index:30;display:flex;flex-direction:column;gap:12px}
+.sl-rail .wizard-nav{display:flex!important;flex-direction:column!important;gap:3px!important;margin:0!important;padding:0!important;border:0!important;background:none!important;position:static!important;overflow:visible!important}
+.sl-rail .wizard-nav button{display:flex!important;align-items:center;gap:10px;width:100%;justify-content:flex-start!important;text-align:left;
+  border:0!important;background:none!important;padding:9px 10px!important;border-radius:10px!important;color:var(--mute,#afb4c3)!important;font-size:13.5px!important;min-height:0!important}
+.sl-rail .wizard-nav button::before{content:attr(data-sl-n);width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:11px;border:1px solid var(--line,#2c303b)}
+.sl-rail .wizard-nav button[data-state="ready"]::before{content:'✓';background:#203a2f;border-color:#2f6a4f;color:var(--ok,#74dfad)}
+.sl-rail .wizard-nav button[aria-current="step"]{background:var(--panel2,#1f222a)!important;color:var(--text,#eef0f5)!important}
+.sl-rail .wizard-nav button:disabled{opacity:.45}
+.sl-rail .sl-rail-note{font-size:12px;color:var(--dim,#7d8394);padding:0 10px}
+
+/* Área de trabalho */
+body.sl-on #guided-fatiador{margin:0!important;padding:calc(var(--sl-head) + 14px) 24px calc(var(--sl-bar) + 18px) calc(var(--sl-rail) + 24px)!important;max-width:none!important;min-height:100vh}
+body.sl-on #guided-fatiador > section#project-location,body.sl-on #guided-fatiador > #swap-status.hidden{display:none!important}
+body.sl-on .wizard-panel > h2{font-size:20px!important;margin:0 0 2px!important}
+body.sl-on .wizard-panel > h2 + p.meta{margin:0 0 12px!important}
+body.sl-on .wizard-panel{max-width:1180px}
+
+/* Uma ação principal por tela: o restante vira secundário. */
+body.sl-on .wizard-panel button:not(.ghost):not(.sl-primary):not([data-op-set]):not(.ux-chip){background:var(--panel2,#1f222a)!important;
+  background-image:none!important;border:1px solid var(--line,#2c303b)!important;color:var(--text,#eef0f5)!important;box-shadow:none!important}
+
+/* Barra de ação */
+.sl-bar{position:fixed;left:var(--sl-rail);right:0;bottom:0;height:var(--sl-bar);display:flex;align-items:center;gap:12px;padding:0 24px;
+  background:#15161b;border-top:1px solid var(--line,#2c303b);z-index:35}
+.sl-bar .sl-status{flex:1;min-width:0;color:var(--mute,#afb4c3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-bar .row{display:flex!important;gap:10px!important;margin:0!important;align-items:center;flex-wrap:nowrap!important}
+.sl-bar button{white-space:nowrap}
+.sl-bar button:not(.sl-primary){background:var(--panel2,#1f222a)!important;background-image:none!important;border:1px solid var(--line,#2c303b)!important;color:var(--text,#eef0f5)!important}
+.sl-bar button.sl-primary,.sl-bar .sl-primary{background:linear-gradient(135deg,#6d5dfc,#8b5cf6)!important;border:0!important;color:#fff!important;font-weight:600;padding:10px 20px!important}
+.sl-bar [hidden]{display:none!important}
+
+/* Gaveta da etapa */
+.sl-drawer{position:fixed;top:0;right:0;width:min(460px,92vw);height:100vh;background:var(--panel,#191b21);border-left:1px solid var(--line,#2c303b);
+  transform:translateX(102%);transition:transform .18s ease;z-index:60;display:flex;flex-direction:column}
+.sl-drawer.on{transform:none}
+.sl-drawer header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line,#2c303b)}
+.sl-drawer header b{flex:1;font-size:15px}
+.sl-drawer .sl-drawer-body{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.sl-drawer .sl-drawer-body > *{margin:0!important;max-width:none!important}
+.sl-shade{position:fixed;inset:0;background:#0008;z-index:55;display:none}
+.sl-shade.on{display:block}
+@media (prefers-reduced-motion:reduce){.sl-drawer{transition:none}}
+
+/* Takes em abas */
+.sl-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line,#2c303b);margin:6px 0 14px}
+.sl-tabs button{background:none!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;padding:9px 12px!important;color:var(--mute,#afb4c3)!important;min-height:0!important}
+.sl-tabs button[aria-selected="true"]{color:var(--text,#eef0f5)!important;border-bottom-color:#8b5cf6!important}
+.sl-tabs .sl-count{margin-left:6px;font-size:11.5px;border:1px solid var(--line,#2c303b);border-radius:999px;padding:1px 7px}
+.sl-tabs .sl-count.warn{color:var(--warn,#f5ca7a);border-color:#7a5a24}
+[data-sl-tabbed] [data-sl-tab]:not(.sl-tab-on){display:none!important}
+[data-sl-tabbed] #old-product-panel > summary{display:none!important}
+
+/* Falas: a lista rola por dentro, sem rolar a página. */
+body.sl-on .ux-workspace{overflow:hidden;min-height:300px;grid-template-rows:100%}
+body.sl-on .ux-workspace > *{min-height:0;height:100%;max-height:none!important;overflow:auto;position:static!important}
+
+/* Telas estreitas: etapas viram faixa superior. */
+@media (max-width:980px){
+  body.sl-on{--sl-rail:0px}
+  .sl-rail{position:static;width:auto;height:auto;margin-top:var(--sl-head);border-right:0;border-bottom:1px solid var(--line,#2c303b)}
+  .sl-rail .wizard-nav{flex-direction:row!important;flex-wrap:wrap}
+  .sl-rail .wizard-nav button{width:auto}
+  body.sl-on #guided-fatiador{padding-top:14px!important}
+}
+
+.sl-rail .wizard-nav button::after{display:none!important;content:none!important}
+body.sl-on .wizard-panel > h2,body.sl-on .wizard-panel h2[tabindex]{scroll-margin-top:calc(var(--sl-head) + 16px)}
+.sl-path{white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:12px!important;color:var(--dim,#7d8394)!important;direction:rtl;text-align:left}
+#sl-actions{display:flex;gap:10px;align-items:center}#sl-actions > .row{order:1}#sl-actions > .sl-primary{order:2}
+
+.sl-tabs, #sl-actions{flex-wrap:wrap}
+@media (max-width:720px){
+  body.sl-on .ux-workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;height:auto!important;max-height:none!important}
+  body.sl-on .ux-workspace > *{height:auto}
+  body.sl-on .ux-workspace > :first-child{max-height:40vh!important}
+  .sl-tabs button{white-space:normal;text-align:left}
+}

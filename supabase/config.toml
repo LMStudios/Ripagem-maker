@@ -1,0 +1,23 @@
+project_id = "ripagem-maker"
+
+[auth]
+enable_signup = false
+enable_anonymous_sign_ins = false
+jwt_expiry = 900
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+otp_length = 6
+
+[auth.email.template.invite]
+subject = "Convite para o Ripagem Maker"
+content_path = "./supabase/templates/convite.html"
+
+[auth.email.template.recovery]
+subject = "Redefinição de senha do Ripagem Maker"
+content_path = "./supabase/templates/recuperacao.html"
+
+[functions.equipe-admin]
+verify_jwt = true
