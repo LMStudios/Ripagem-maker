@@ -7,7 +7,7 @@
 !/index.html
 !/LEIA-ME*.txt
 !/LEIA-ME*.md
-!/NOTAS-*.md
+!/CHANGELOG.md
 !/plataforma
 /plataforma/*
 !/plataforma/*.py

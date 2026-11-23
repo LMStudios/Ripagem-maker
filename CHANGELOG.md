@@ -1,0 +1,14 @@
+# Notas de versão
+
+## 3.15.1
+
+- Caçar B-rolls está disponível em Ferramentas avulsas, com busca, prévia e download sem precisar abrir um projeto.
+- Na Troca de Potes, as sugestões começam na primeira menção ao produto. Os clipes escolhidos entram na faixa V3 do XML.
+- Busca, cartões e botões se reorganizam em janelas estreitas.
+
+## 3.15.0
+
+- Busca de B-rolls no TikTok e no Pinterest pelo aplicativo instalado, com detecção de texto na tela e marca-d’água.
+- Clipes já baixados podem ser reutilizados em outras falas.
+
+As notas das versões anteriores estão no [histórico de versões](https://github.com/LMStudios/Ripagem-maker/tree/442d4eb5744b0a4dc46f4df47eea62f92fbec6dd).
