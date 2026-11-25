@@ -1,5 +1,13 @@
 # Notas de versão
 
+## 3.16.0
+
+- Nova aparência: paleta, tipografia, botões, campos, abas, avisos e diálogos seguem um único sistema visual no painel e na Troca de potes.
+- Barra lateral organizada em grupos (Criar, Utilitários, Sistema) com ícones, e pode ser recolhida; a escolha fica salva.
+- Busca rápida (Ctrl/⌘ K ou /) para ir a qualquer tela, começar uma ripagem ou reabrir um projeto recente, também dentro da Troca de potes.
+- Em telas estreitas, a navegação vira uma faixa única com ícones, sem rolar a página para os lados.
+- Os arquivos da interface são revalidados por ETag e ficam em memória no app local: reaberturas não baixam de novo o que não mudou.
+
 ## 3.15.6
 
 - Comparação de quadros da detecção visual usa menos memória temporária e processamento, mantendo a leitura do OCR na resolução original da análise.
