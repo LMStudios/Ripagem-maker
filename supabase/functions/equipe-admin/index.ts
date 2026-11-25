@@ -168,7 +168,7 @@ export function createHandler(conf: Config, request = fetch) {
       { method: "POST", json: manual ? { type: "invite", email } : { email } },
     );
     const otp = "email_otp" in convite ? convite.email_otp : undefined;
-    if (manual && !/^\d{6}$/.test(otp ?? "")) {
+    if (manual && !/^\d{6,10}$/.test(otp ?? "")) {
       throw new ApiError(502, "Não foi possível gerar o código do convite.");
     }
     const invited = "user" in convite ? convite.user : convite;

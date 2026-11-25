@@ -88,7 +88,7 @@ function app({
       });
     }
     if (url.pathname === "/auth/v1/admin/generate_link") {
-      return respond({ id: editor, email_otp: "928164", action_link: "https://should-not-be-returned.test" });
+      return respond({ id: editor, email_otp: "92816437", action_link: "https://should-not-be-returned.test" });
     }
     if (url.pathname === "/auth/v1/invite") {
       return respond({ id: editor, email: "editor@exemplo.com" });
@@ -223,7 +223,7 @@ Deno.test("gera código manual para ativar no app sem enviar e-mail", async () =
   });
   assert(response.status, 201);
   const result = await response.json();
-  assert(result.codigo_ativacao, "928164");
+  assert(result.codigo_ativacao, "92816437");
   assert(result.action_link, undefined);
   assert(client.calls.find((item) => item.url.pathname === "/auth/v1/admin/generate_link")?.body,
     { type: "invite", email: "editor@exemplo.com" });
