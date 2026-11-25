@@ -36,6 +36,38 @@ def _send(h, code, body, ctype="application/json; charset=utf-8", extra=None):
     h.wfile.write(body)
 
 
+_STATIC_CACHE = {}
+
+
+def _send_static(h, f):
+    """Arquivos da interface com ETag: o navegador revalida e recebe 304 sem baixar de novo.
+    O conteúdo fica em memória enquanto o arquivo não muda (tamanho e data conferidos a cada pedido)."""
+    st = f.stat()
+    key = str(f)
+    tag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'
+    cached = _STATIC_CACHE.get(key)
+    if not cached or cached[0] != tag:
+        cached = (tag, f.read_bytes())
+        _STATIC_CACHE[key] = cached
+    ctype = mimetypes.guess_type(f.name)[0] or "text/plain"
+    if ctype.startswith("text/") or ctype in ("application/javascript", "application/json", "image/svg+xml"):
+        ctype += "; charset=utf-8"
+    headers = {"ETag": tag, "Cache-Control": "no-cache"}
+    if tag in (h.headers.get("If-None-Match") or ""):
+        h.send_response(304)
+        for k, v in headers.items():
+            h.send_header(k, v)
+        h.end_headers()
+        return
+    h.send_response(200)
+    h.send_header("Content-Type", ctype)
+    h.send_header("Content-Length", str(len(cached[1])))
+    for k, v in headers.items():
+        h.send_header(k, v)
+    h.end_headers()
+    h.wfile.write(cached[1])
+
+
 def _body(h):
     n = int(h.headers.get("Content-Length", 0) or 0)
     return json.loads(h.rfile.read(n) or b"{}") if n else {}
@@ -137,8 +169,8 @@ def handle(h, method):
             return True
         if method == "GET" and path.startswith("/static/"):
             f = (STATIC / unquote(path[len("/static/"):])).resolve()
-            if str(f).startswith(str(STATIC)) and f.is_file():
-                _send(h, 200, f.read_bytes(), (mimetypes.guess_type(f.name)[0] or "text/plain") + "; charset=utf-8")
+            if f.is_relative_to(STATIC) and f.is_file():
+                _send_static(h, f)
             else:
                 _send(h, 404, {"erro": "não encontrado"})
             return True

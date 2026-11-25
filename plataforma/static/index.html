@@ -13,18 +13,25 @@
 <link rel="stylesheet" href="/static/interface-polish.css?v=3.10.9">
 <link rel="stylesheet" href="/static/clean-studio.css?v=3.10.20">
 <link rel="stylesheet" href="/static/equipe.css?v=3.11.1">
+<link rel="stylesheet" href="/static/design.css?v=4.0.0">
+<script>try{if(localStorage.getItem("rm.compact")==="1")document.documentElement.classList.add("rm-compact")}catch(e){}</script>
 </head>
 <body>
 <div class="app">
   <aside class="side" aria-label="Navegação">
     <div class="brand"><img class="logo" src="/static/assets/app-icon.png" alt=""><div><b>Ripagem Maker</b><small>edição de VSL e criativos</small></div></div>
-    <nav class="nav">
-      <a href="#/" data-r="/"><span class="ico" aria-hidden="true">◧</span>Painel</a>
-      <div class="nav-h">Ferramentas</div>
-      <a href="/fatiador"><span class="ico" aria-hidden="true">✂</span>Troca de potes</a>
-      <a href="#/demanda" data-r="/demanda"><span class="ico" aria-hidden="true">↔</span>Microlead’s</a>
-      <a href="#/nomes" data-r="/nomes"><span class="ico" aria-hidden="true">Aa</span>Nomenclatura VTurb</a>
-      <a href="#/ajustes" data-r="/ajustes"><span class="ico" aria-hidden="true">⚙</span>Ajustes</a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#/" data-r="/">Painel</a>
+      <a href="#/projetos" data-r="/projetos">Projetos</a>
+      <div class="nav-h">Criar</div>
+      <a href="/fatiador">Troca de potes</a>
+      <a href="#/demanda" data-r="/demanda">Microlead’s</a>
+      <a href="#/ferramentas" data-r="/ferramentas">Ferramentas avulsas</a>
+      <div class="nav-h">Utilitários</div>
+      <a href="#/nomes" data-r="/nomes">Nomenclatura VTurb</a>
+      <div class="nav-h">Sistema</div>
+      <a href="#/ajustes" data-r="/ajustes">Ajustes</a>
+      <a href="#/studio" data-r="/studio">Experiência Studio</a>
     </nav>
     <div class="foot" id="sys"><span class="dot"></span>Verificando o sistema…</div>
   </aside>
@@ -42,6 +49,7 @@
 <script src="/static/armazenamento-ui.js?v=3.8.0"></script>
 <script src="/static/graphite.js?v=3.10.23"></script>
 <script src="/static/equipe.js?v=3.15.5"></script>
+<script src="/static/shell.js?v=4.0.0"></script>
 <script src="/static/ajustes-abas.js?v=3.15.2"></script>
 </body>
 </html>
