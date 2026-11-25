@@ -32,6 +32,17 @@ class WholeIntervalTests(unittest.TestCase):
   result=self.run_plan([self.row('a',0,1000,3),self.row('b',1000,2000,6)])
   self.assertTrue(result['issues'])
 
+class CoverageOrderTests(unittest.TestCase):
+ def test_first_mention_cut_keeps_earlier_visual_first(self):
+  rows=[{'id':'fala','start':900,'end':2000},
+        {'id':'visual','start':950,'end':1000,'produto_antigo':True}]
+  state={'cobrir_falas':True}
+  with patch.object(T,'load',return_value={}),patch.object(V,'coverage_policy',return_value={'primeira_mencao_ms':1000}),patch.object(V,'_covered_mentions',return_value=rows):
+   result=V.covered_mentions(Path('.'),state)
+  self.assertEqual([(r['id'],r['start'],r['end']) for r in result],
+                   [('visual',950,1000),('fala',1000,2000)])
+  self.assertEqual(state['coverage_markers'][0]['end'],1000)
+
 class ManualIntervalTests(unittest.TestCase):
  def test_requires_explicit_authorization(self):
   with patch('plataforma.workflow.require_takes'):

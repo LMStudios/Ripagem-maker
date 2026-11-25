@@ -2,6 +2,8 @@
 
 ## 3.16.1
 
+- Corrige a ordem dos takes quando uma aparição aprovada precede a primeira menção falada do produto.
+
 - Nome do produto dito em partes, com pausas ou pontos entre elas ("Gluco. Trust. Pro."), agora entra nas falas a trocar. Com três partes ou mais, vale mesmo quando a transcrição troca o speaker no meio do nome, comum em avatares.
 - Conferência de voz: ao preparar as amostras, cada fala é comparada com a voz de cada speaker. Se soar como outra pessoa (ex.: outra mulher marcada como a principal), a fala fica com o speaker a confirmar na etapa Falas, com a sugestão de quem parece ser.
 - Amostras para clonagem mais limpas: ficam de fora falas que não soam como o speaker, as bordas seguem as palavras, as emendas são suaves e o volume é uniformizado. O ElevenLabs recebe o pedido de remover o ruído de fundo ao criar a voz.

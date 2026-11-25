@@ -362,7 +362,8 @@ def covered_mentions(out,state):
                 key=T.digest([row['start'],end]);markers[key]={'id':key,'start':row['start'],'end':end,'text':row.get('text',''),'motivo':'Adaptar modo de uso · sem potes antes da primeira menção'}
         if first is not None and row['end']>first:allowed.append(dict(row,start=max(row['start'],first)))
     state['coverage_markers']=list(markers.values());state['coverage_policy']=policy
-    return allowed
+    # O corte pela primeira menção pode mover uma fala para depois de uma aparição.
+    return sorted(allowed,key=lambda row:(row['start'],row['end']))
 
 def refresh_coverage(out,state):
     if not state.get('cobrir_falas'):
