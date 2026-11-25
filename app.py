@@ -258,7 +258,28 @@ def find_phrases(d, product, aliases="", novo=""):
     res = []
     params = dict(field="text", time="start", end="end", max_pause=850)
     protect_new = novo and MC.compact(novo) not in {MC.compact(n) for n in names}
-    for sw in sentences(MC.transcript_words(d)):
+    words = MC.transcript_words(d)
+    groups = sentences(words)
+    # Nome dito em partes (“Gluco. Trust. Pro.”) une as frases que ele atravessa.
+    bridges = MC.bridged_spans(words, names, **params)
+    if bridges:
+        index = {id(w): g for g, group in enumerate(groups) for w in group}
+        merged = []
+        spans_by_group = {}
+        for i, size, _ in bridges:
+            a, b = index[id(words[i])], index[id(words[i + size - 1])]
+            spans_by_group[a] = max(spans_by_group.get(a, a), b)
+        g = 0
+        while g < len(groups):
+            last = spans_by_group.get(g, g)
+            k = g
+            while k < last:
+                k += 1
+                last = max(last, spans_by_group.get(k, k))
+            merged.append([w for group in groups[g:last + 1] for w in group])
+            g = last + 1
+        groups = merged
+    for sw in groups:
         picks = MC.timed_spans(sw, names, **params)
         if protect_new:
             protected = {j for i, size, _ in MC.timed_spans(sw, [novo], approximate=False, **params)
@@ -266,7 +287,8 @@ def find_phrases(d, product, aliases="", novo=""):
             picks = [(i,size,score) for i,size,score in picks if not protected.intersection(range(i,i+size))]
         if not picks:
             continue
-        item = {"n": len(res) + 1, "speaker": sw[0].get("speaker") or "A", "start": sw[0]["start"],
+        voices = Counter(w.get("speaker") for w in sw if w.get("speaker"))
+        item = {"n": len(res) + 1, "speaker": (voices.most_common(1)[0][0] if voices else None) or "A", "start": sw[0]["start"],
                 "end": sw[-1]["end"], "text": " ".join(w["text"] for w in sw), "mencoes": len(picks), "primeira_mencao_ms": sw[picks[0][0]]["start"]}
         variants = [" ".join(w["text"] for w in sw[i:i + size]) for i, size, score in picks if score < 1]
         if variants:

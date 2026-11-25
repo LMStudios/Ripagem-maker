@@ -38,7 +38,7 @@ def minimax_ok(response,key):
 
 def clone(provider,key,path,label):
     if provider=='elevenlabs':
-        with open(path,'rb') as fp:r=requests.post('https://api.elevenlabs.io/v1/voices/add',headers={'xi-api-key':key},data={'name':label},files=[('files',(Path(path).name,fp,'audio/mpeg'))],timeout=(20,180))
+        with open(path,'rb') as fp:r=requests.post('https://api.elevenlabs.io/v1/voices/add',headers={'xi-api-key':key},data={'name':label,'remove_background_noise':'true'},files=[('files',(Path(path).name,fp,'audio/mpeg'))],timeout=(20,180))
         data=response_ok(r,key).json();voice=data.get('voice_id')
         if not voice:raise ValueError('ElevenLabs não retornou o identificador da voz.')
         return voice,bool(data.get('requires_verification'))

@@ -122,3 +122,28 @@ class MentionTests(unittest.TestCase):
             plan=T.save(out,[{'id':'a','mencao_descartada':False}])
             self.assertEqual(plan['itens'][0]['novo'],row['novo'])
             self.assertFalse(plan['itens'][0]['aprovado'])
+
+
+class SplitNameTests(unittest.TestCase):
+    """Avatares falam o nome do produto em partes, com pausas e pontos entre elas."""
+    @staticmethod
+    def raw(items):
+        return {'words': [dict(text=w, start=t, end=t + 300, speaker=s) for w, t, s in items]}
+
+    def test_three_parts_with_periods_and_pauses_are_one_mention(self):
+        d = self.raw([('Try', 0, 'A'), ('Gluco.', 400, 'A'), ('Trust.', 1800, 'A'), ('Pro.', 3200, 'A'), ('It', 5000, 'A'), ('works.', 5400, 'A')])
+        found, _ = find_phrases(d, 'Gluco Trust Pro', novo='Neuro Calm')
+        self.assertEqual([(r['text'], r['novo']) for r in found], [('Try Gluco. Trust. Pro.', 'Try Neuro Calm.')])
+
+    def test_diarization_flip_inside_the_name_keeps_majority_speaker(self):
+        d = self.raw([('Gluco', 0, 'A'), ('Trust', 500, 'B'), ('Pro.', 1000, 'A')])
+        found, _ = find_phrases(d, 'GlucoTrust Pro', novo='X')
+        self.assertEqual([(r['novo'], r['speaker']) for r in found], [('X.', 'A')])
+
+    def test_syllables_of_a_single_word_name(self):
+        found, _ = find_phrases(self.raw([('Glu.', 0, 'A'), ('Co.', 900, 'A'), ('Trust.', 1800, 'A')]), 'GlucoTrust', novo='X')
+        self.assertEqual([r['novo'] for r in found], ['X.'])
+
+    def test_parts_far_apart_or_only_similar_are_not_joined(self):
+        self.assertEqual(find_phrases(self.raw([('Gluco.', 0, 'A'), ('Trust.', 1800, 'A'), ('Pro.', 6000, 'A')]), 'Gluco Trust Pro')[0], [])
+        self.assertEqual(find_phrases(self.raw([('Glucose.', 0, 'A'), ('Trust.', 900, 'A'), ('Pro.', 1800, 'A')]), 'Gluco Trust Pro')[0], [])

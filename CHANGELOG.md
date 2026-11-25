@@ -1,5 +1,12 @@
 # Notas de versão
 
+## 3.16.1
+
+- Nome do produto dito em partes, com pausas ou pontos entre elas ("Gluco. Trust. Pro."), agora entra nas falas a trocar. Com três partes ou mais, vale mesmo quando a transcrição troca o speaker no meio do nome, comum em avatares.
+- Conferência de voz: ao preparar as amostras, cada fala é comparada com a voz de cada speaker. Se soar como outra pessoa (ex.: outra mulher marcada como a principal), a fala fica com o speaker a confirmar na etapa Falas, com a sugestão de quem parece ser.
+- Amostras para clonagem mais limpas: ficam de fora falas que não soam como o speaker, as bordas seguem as palavras, as emendas são suaves e o volume é uniformizado. O ElevenLabs recebe o pedido de remover o ruído de fundo ao criar a voz.
+- Detecção do produto na imagem até 2× mais rápida em vídeos com avatar: entre as leituras completas, só a área do quadro que mudou é relida, na mesma escala.
+
 ## 3.16.0
 
 - Nova aparência: paleta, tipografia, botões, campos, abas, avisos e diálogos seguem um único sistema visual no painel e na Troca de potes.

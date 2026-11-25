@@ -62,22 +62,95 @@ def frames(args, start, duration=None, rate=RATE):
         proc.wait()
 
 
+_LAST_BOXES = None  # caixas (px) da última leitura completa, na ordem das linhas
+
+
 def read(engine, rgb, details=False):
+    global _LAST_BOXES
     result = engine(np.ascontiguousarray(rgb[:, :, ::-1]))
     h, w = rgb.shape[:2]
-    rows = []
+    rows, boxes = [], []
     for box, text, score in zip(result.boxes if result.boxes is not None else [], result.txts or [], result.scores or []):
         box = np.asarray(box, dtype=float)
         row = [text, round(float(score), 3), round(float(box[:, 1].mean()) / h, 3), round(float(np.ptp(box[:, 0])) / w, 3)]
         if details:
             row += [round(float(box[:, 0].mean()) / w, 3), round(float(np.ptp(box[:, 1])) / h, 3)]
         rows.append(row)
+        boxes.append((float(box[:, 0].min()), float(box[:, 1].min()), float(box[:, 0].max()), float(box[:, 1].max())))
+    _LAST_BOXES = boxes
     return rows
+
+
+FULL_EVERY = 3.0   # leitura completa do quadro; entre elas, só a área que mudou é relida
+REGION_MAX = .45   # acima desta fração do quadro, a leitura parcial não compensa
+
+
+def read_full(engine, rgb):
+    """Leitura completa; as caixas só existem quando o motor real as informou."""
+    global _LAST_BOXES
+    _LAST_BOXES = None
+    rows = read(engine, rgb)
+    boxes = _LAST_BOXES
+    return [(row, box) for row, box in zip(rows, boxes)] if boxes is not None and len(boxes) == len(rows) else None, rows
+
+
+def read_region(engine, rgb, region):
+    """Lê só o recorte, na MESMA escala da leitura completa (o detector amplia o lado menor
+    do quadro; aqui o recorte recebe o mesmo fator), para não perder nem inventar texto.
+    None se o motor não permitir ajustar a escala."""
+    h, w = rgb.shape[:2]
+    x0, y0, x1, y1 = region
+    crop = rgb[y0:y1, x0:x1]
+    det = getattr(engine, 'text_det', None)
+    if det is None or getattr(det, 'limit_type', None) != 'min' or not getattr(det, 'limit_side_len', None) or not crop.size:
+        return None
+    ratio = max(1.0, det.limit_side_len / min(h, w))
+    original = det.limit_side_len
+    det.limit_side_len = max(32, round(min(crop.shape[:2]) * ratio))
+    try:
+        result = engine(np.ascontiguousarray(crop[:, :, ::-1]))
+    finally:
+        det.limit_side_len = original
+    rows = []
+    for box, text, score in zip(result.boxes if result.boxes is not None else [], result.txts or [], result.scores or []):
+        box = np.asarray(box, dtype=float) + (x0, y0)
+        rows.append(([text, round(float(score), 3), round(float(box[:, 1].mean()) / h, 3), round(float(np.ptp(box[:, 0])) / w, 3)],
+                     (float(box[:, 0].min()), float(box[:, 1].min()), float(box[:, 0].max()), float(box[:, 1].max()))))
+    return rows
+
+
+def _overlaps(box, region):
+    return box[0] < region[2] and box[2] > region[0] and box[1] < region[3] and box[3] > region[1]
+
+
+def changed_region(small, before, width, height, boxes):
+    """Retângulo (px) que cobre os blocos alterados e o texto anterior que eles tocam; None = ler tudo."""
+    changed = np.abs(small - before) > 3.0
+    if not changed.any() or changed.mean() > REGION_MAX:
+        return None
+    rows, cols = np.nonzero(changed)
+    bh, bw = height / 18, width / 32
+    region = [max(0, (cols.min() - 1) * bw), max(0, (rows.min() - 1) * bh),
+              min(width, (cols.max() + 2) * bw), min(height, (rows.max() + 2) * bh)]
+    grown = True
+    while grown:
+        grown = False
+        for _, box in boxes:
+            if _overlaps(box, region) and not (box[0] >= region[0] and box[1] >= region[1] and box[2] <= region[2] and box[3] <= region[3]):
+                pad = 8
+                region = [max(0, min(region[0], box[0] - pad)), max(0, min(region[1], box[1] - pad)),
+                          min(width, max(region[2], box[2] + pad)), min(height, max(region[3], box[3] + pad))]
+                grown = True
+    region = [int(region[0]), int(region[1]), int(np.ceil(region[2])), int(np.ceil(region[3]))]
+    if (region[2] - region[0]) * (region[3] - region[1]) > REGION_MAX * width * height:
+        return None
+    return tuple(region)
 
 
 def unit(engine, args, start, target):
     partial = target.with_suffix('.partial')
     previous = last_tiny = pending_cut = last_read = last_ocr = last_detail = None
+    last_boxes = last_full = None
     with partial.open('w', encoding='utf-8') as fp:
         for t, rgb in frames(args, start):
             small = tiny(rgb)
@@ -106,7 +179,19 @@ def unit(engine, args, start, target):
             if unchanged and last_ocr is not None and t - last_ocr < REFRESH:
                 fp.write(json.dumps({'t': t, 'igual': last_read}) + '\n')
             else:
-                fp.write(json.dumps({'t': t, 'ocr': read(engine, rgb)}, ensure_ascii=False) + '\n')
+                boxes = rows = None
+                if last_boxes is not None and last_tiny is not None and t - last_full < FULL_EVERY - 1e-6:
+                    region = changed_region(small, last_tiny, rgb.shape[1], rgb.shape[0], last_boxes)
+                    fresh = read_region(engine, rgb, region) if region else None
+                    if fresh is not None:
+                        boxes = [item for item in last_boxes if not _overlaps(item[1], region)] + fresh
+                        boxes.sort(key=lambda item: (round(item[1][1] / 8), item[1][0]))
+                        rows = [row for row, _ in boxes]
+                if rows is None:
+                    boxes, rows = read_full(engine, rgb)
+                    last_full = t
+                fp.write(json.dumps({'t': t, 'ocr': rows}, ensure_ascii=False) + '\n')
+                last_boxes = boxes
                 last_tiny = small
                 last_ocr = t
             last_read = t
