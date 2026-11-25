@@ -188,3 +188,31 @@ class FillingRegressionTests(unittest.TestCase):
   with patch.object(D,'coverage_rows',return_value=sightings),patch.object(V.T,'source',return_value='source.mp4'),patch.object(V.T,'probe',return_value={'fps':25,'duration':4}),patch.object(V.T,'load',return_value={'itens':[]}),patch('plataforma.armazenamento.visual_margin_ms',return_value=1500):
    self.assertEqual(V.coverage_gaps('unused',{},[{'start_frame':26,'end_frame':98}])[0]['quadros_sem_cobertura'],1)
    self.assertEqual(V.coverage_gaps('unused',{},[{'start_frame':25,'end_frame':98}]),[])
+
+
+class RegionReadTests(unittest.TestCase):
+ """Avatar falando: só a área que mudou é relida entre leituras completas, com o mesmo texto."""
+ def test_moving_face_rereads_only_the_changed_area_and_keeps_static_text(self):
+  import json,tempfile,numpy as np
+  from pathlib import Path
+  from types import SimpleNamespace
+  from plataforma import ocr_worker as W
+  class Engine:
+   def __init__(self):self.text_det=SimpleNamespace(limit_type='min',limit_side_len=736);self.shapes=[]
+   def __call__(self,bgr):
+    self.shapes.append(bgr.shape[:2]);ys,xs=np.nonzero(bgr[:,:,0]==255);boxes=[];txts=[]
+    if len(ys):boxes.append([[xs.min(),ys.min()],[xs.max(),ys.min()],[xs.max(),ys.max()],[xs.min(),ys.max()]]);txts.append('ROSEDIL')
+    return SimpleNamespace(boxes=np.array(boxes) if boxes else None,txts=txts,scores=[.99]*len(txts))
+  frames=[]
+  for k in range(16):
+   rgb=np.zeros((540,960,3),dtype=np.uint8);rgb[30:60,40:300]=255       # rótulo parado
+   rgb[200:320,420+k*6:540+k*6]=90+k*9                                  # rosto em movimento
+   frames.append((k/4,rgb))
+  engine=Engine()
+  with tempfile.TemporaryDirectory() as d,patch.object(W,'frames',return_value=iter(frames)):
+   path=Path(d)/'unit.jsonl';W.unit(engine,SimpleNamespace(),0,path)
+   reads=[json.loads(l) for l in path.read_text().splitlines() if '"ocr"' in l]
+  self.assertTrue(all(any(r[0]=='ROSEDIL' for r in row['ocr']) for row in reads))
+  full=[s for s in engine.shapes if s==(540,960)];partial=[s for s in engine.shapes if s!=(540,960)]
+  self.assertTrue(partial and all(h*w<.45*540*960 for h,w in partial))
+  self.assertEqual(engine.text_det.limit_side_len,736)

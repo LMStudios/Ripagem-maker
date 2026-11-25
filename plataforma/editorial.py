@@ -48,7 +48,7 @@ def assign(out,body):
         for rid in ids:
             row=byid[rid]
             if row['speaker']!=name and row.get('audio'):row.setdefault('historico_audio',[]).append(copy.deepcopy(row.pop('audio')))
-            row.update(speaker=name,speaker_pendente=False,speaker_confirmado=True,speaker_aviso='')
+            row.update(speaker=name,speaker_pendente=False,speaker_confirmado=True,speaker_aviso='');row.pop('speaker_sugerido',None)
         plan['speakers']=sorted(set(plan['speakers'])|{name});plan['revisao']=None;plan.pop('previa',None);T.write(T.plan_path(out),plan)
     return plan
 

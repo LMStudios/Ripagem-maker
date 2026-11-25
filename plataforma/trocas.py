@@ -194,7 +194,9 @@ def save(out,updates):
                     raise ValueError('Ainda há modo de uso original na fala. Adapte o texto antes de aprovar.')
                 row['forma_confirmada']=True
             if (new,speaker)!=(row['novo'],row['speaker']) and row.get('audio'):row.setdefault('historico_audio',[]).append(copy.deepcopy(row.pop('audio')))
-            if speaker!=row['speaker'] and speaker!='A_CONFIRMAR':row.update(speaker_pendente=False,speaker_confirmado=True,speaker_aviso='')
+            # Trocar de speaker, ou manter o atual diante de um aviso de voz, confirma a pessoa.
+            if speaker!='A_CONFIRMAR' and (speaker!=row['speaker'] or (change.get('confirmar_speaker') is True and row.get('speaker_sugerido'))):
+                row.update(speaker_pendente=False,speaker_confirmado=True,speaker_aviso='');row.pop('speaker_sugerido',None)
             row.update(novo=new,speaker=speaker,aprovado=accepted)
         if digest([[r['id'],r['novo'],r['speaker'],r['aprovado']] for r in plan['itens']])!=before:plan['revisao']=None;plan.pop('previa',None)
         write(plan_path(out),plan);return plan
@@ -213,9 +215,42 @@ def approved(plan,with_audio=False):
             if audio.get('texto_hash')!=digest([row['novo'],row['speaker']]):raise ValueError('Há áudio desatualizado. Gere novamente a frase alterada.')
     return rows
 
+VOICE_NOTICE='A voz deste trecho parece ser do speaker {}, não do {}. Ouça o original e confirme a pessoa.'
+
+def voice_check(job,out,plan,profiles,src):
+    """Marca para conferência as falas cuja voz está mais perto de outro speaker.
+    Só avisa: a pessoa confirma ou troca o speaker na etapa Falas."""
+    from . import perfil_voz as PV
+    flagged={}
+    if not profiles.ok:return flagged
+    for row in plan['itens']:
+        speaker=row['speaker']
+        if job.cancel:raise M.Cancelled()
+        if speaker=='A_CONFIRMAR' or row.get('speaker_confirmado') or row.get('speaker_pendente') or row.get('voz_conferida')==speaker:continue
+        length=(row['fim_ms']-row['inicio_ms'])/1000
+        suggestion=PV.Profiles.suggest(profiles,PV.features(PV.decode(M.FFMPEG,src,row['inicio_ms']/1000,min(length,20))),speaker) if length>=1.2 else None
+        flagged[row['id']]=(speaker,suggestion)
+    if not flagged:return flagged
+    with LOCK:
+        current=load(out)
+        for row in current['itens']:
+            checked=flagged.get(row['id'])
+            if not checked or checked[0]!=row['speaker'] or row.get('speaker_confirmado'):continue
+            row['voz_conferida']=row['speaker']
+            if checked[1]:
+                row.update(speaker_pendente=True,speaker_sugerido=checked[1],speaker_aviso=VOICE_NOTICE.format(checked[1],row['speaker']))
+                current['revisao']=None
+        write(plan_path(out),current)
+    return {k:v[1] for k,v in flagged.items() if v[1]}
+
 def sample_job(job,out):
+    from . import perfil_voz as PV
     plan=load(out);raw=json.loads((Path(out)/'transcricao_bruta.json').read_text());src=source(out);samples={}
     utterances=raw.get('utterances') or []
+    job.step='Conferindo as vozes dos speakers'
+    profiles,vectors=PV.build(M.FFMPEG,src,utterances,cancel=lambda:job.cancel)
+    suspicious=voice_check(job,out,plan,profiles,src)
+    plan=load(out)
     for speaker in plan['speakers']:
         if speaker=='A_CONFIRMAR':continue
         existing=plan.get('samples',{}).get(speaker,{})
@@ -224,9 +259,14 @@ def sample_job(job,out):
         for u in sorted(utterances,key=lambda u:u['end']-u['start'],reverse=True):
             if str(u.get('speaker') or 'A_CONFIRMAR')!=speaker:continue
             if any(str(v.get('speaker') or 'A_CONFIRMAR')!=speaker and v['start']<u['end'] and v['end']>u['start'] for v in utterances):continue
-            length=min((u['end']-u['start'])/1000,60-total)
-            if length<.5:continue
-            intervals.append((u['start']/1000,length));total+=length
+            # Bordas pelas palavras: sem respiro ou fim de frase de outra pessoa.
+            start,length=PV.utterance_bounds(u);length=min(length,60-total)
+            if length<1:continue
+            # Fala que a diarização atribuiu a este speaker mas soa como outra pessoa estraga o clone.
+            if profiles.ok and speaker in profiles.center:
+                vector=vectors[id(u)] if id(u) in vectors else PV.features(PV.decode(M.FFMPEG,src,start,min(length,20)))
+                if not profiles.coherent(vector,speaker):continue
+            intervals.append((start,length));total+=length
             if total>=60:break
         if not intervals:
             for row in plan['itens']:
@@ -239,14 +279,19 @@ def sample_job(job,out):
         target=folder/(digest(speaker)+'.mp3');cmd=[M.FFMPEG,'-y','-v','error']
         for start,length in intervals:cmd+=['-ss',str(start),'-t',str(length),'-i',str(src)]
         filters=[]
-        for i in range(len(intervals)):filters.append(f'[{i}:a:0]asetpts=PTS-STARTPTS,aresample=44100,aformat=channel_layouts=mono[a{i}]')
-        filters.append(''.join(f'[a{i}]' for i in range(len(intervals)))+f'concat=n={len(intervals)}:v=0:a=1[a]')
+        # Emendas suaves e volume uniforme: cortes secos e saltos de volume viram ruído no clone.
+        for i,(start,length) in enumerate(intervals):
+            fade=min(.04,length/4)
+            filters.append(f'[{i}:a:0]asetpts=PTS-STARTPTS,aresample=44100,aformat=channel_layouts=mono,highpass=f=70,afade=t=in:d={fade:.3f},afade=t=out:st={max(0,length-fade):.3f}:d={fade:.3f},apad=pad_dur=0.15[a{i}]')
+        filters.append(''.join(f'[a{i}]' for i in range(len(intervals)))+f'concat=n={len(intervals)}:v=0:a=1,loudnorm=I=-18:TP=-2:LRA=11,aresample=44100[a]')
         cmd+=['-filter_complex',';'.join(filters),'-map','[a]','-c:a','libmp3lame','-b:a','128k',str(target)]
         job.step='Preparando amostra do speaker '+speaker;M.run_proc(job,cmd)
         samples[speaker]={'arquivo':str(target.relative_to(out)),'duracao_s':probe(target)['duration']}
     with LOCK:
         plan=load(out);plan['samples']=samples;write(plan_path(out),plan)
-    job.step='Amostras prontas para ouvir';return {'samples':samples}
+    job.step='Amostras prontas para ouvir'
+    if suspicious:job.step+=f' · {len(suspicious)} fala(s) com voz a conferir na etapa Falas'
+    return {'samples':samples,'vozes_a_conferir':suspicious}
 
 def replace_sample_job(job, out, speaker, uploaded, name):
     """Confere e converte outra amostra antes de trocar a referência do speaker."""

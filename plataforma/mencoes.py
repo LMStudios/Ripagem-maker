@@ -220,8 +220,55 @@ def spans(tokens, terms, *, approximate=True):
     return sorted(result)
 
 
+def bridged_spans(words, terms, *, field='w', time='s', end='e', max_pause=.85):
+    """Nome exato dito em partes, separadas por ponto ou pausa (ex.: “Gluco. Trust. Pro.”).
+
+    Só aceita a grafia exata de um nome conhecido. Duas partes: mesma pessoa, sem fim de
+    frase e pausa de até 1,75× o limite normal. Três ou mais partes: pontuação e pausas de
+    até 3× o limite, mesmo que a diarização troque o speaker no meio (comum em avatares). Retorna apenas o que
+    atravessa uma divisão; o restante já é coberto pela busca dentro de cada frase."""
+    entries = [_parts(n) for n in terms if compact(n)]
+    exact = {''.join(parts) for parts in entries if len(''.join(parts)) >= 6}
+    if not exact or len(words) < 2:
+        return []
+    max_size = max(4, max(len(parts) + 1 for parts in entries))
+    tokens = [''.join(_parts(w[field])) for w in words]
+    result = []
+    for i in range(len(words)):
+        text, crossed = '', False
+        for size in range(1, min(max_size, len(words) - i) + 1):
+            k = i + size - 1
+            if not tokens[k]:
+                break
+            if size > 1:
+                prev, curr = words[k - 1], words[k]
+                gap = curr[time] - prev.get(end, prev[time])
+                if gap > max_pause * 3:
+                    break
+                strong = (curr.get('speaker') != prev.get('speaker') or gap > max_pause * 1.75
+                          or re.search(r'[.!?][\"\')\]]*$', str(prev[field])))
+                if strong:
+                    crossed = 'strong'
+                elif gap > max_pause and not crossed:
+                    crossed = 'pause'
+            text += tokens[k]
+            if text in exact and crossed and size >= 2:
+                # Duas partes só atravessam uma pausa curta da mesma pessoa, sem fim de frase.
+                if size == 2 and crossed == 'strong':
+                    continue
+                result.append((i, size, 1.0))
+                break
+    occupied, kept = set(), []
+    for i, size, score in sorted(result, key=lambda hit: (-hit[1], hit[0])):
+        if not occupied.intersection(range(i, i + size)):
+            occupied.update(range(i, i + size))
+            kept.append((i, size, score))
+    return sorted(kept)
+
+
 def timed_spans(words, terms, *, approximate=True, field='w', time='s', end='e', max_pause=.85):
-    """Não costura nomes entre frases, speakers ou pausas longas na auditoria."""
+    """Não costura nomes entre frases, speakers ou pausas longas na auditoria,
+    exceto a grafia exata de um nome dito em partes (ver bridged_spans)."""
     result, start = [], 0
     for i in range(1, len(words) + 1):
         if i < len(words):
@@ -233,4 +280,14 @@ def timed_spans(words, terms, *, approximate=True, field='w', time='s', end='e',
         if i > start:
             result.extend((start + a, size, score) for a, size, score in spans([w[field] for w in words[start:i]], terms, approximate=approximate))
         start = i
-    return result
+    occupied = {k for a, size, _ in result for k in range(a, a + size)}
+    for a, size, score in bridged_spans(words, terms, field=field, time=time, end=end, max_pause=max_pause):
+        span = set(range(a, a + size))
+        if span & occupied:
+            # Uma parte isolada (ex.: “Pro.”) cede lugar ao nome completo.
+            if any(size <= s2 or not set(range(b, b + s2)) <= span for b, s2, _ in result if set(range(b, b + s2)) & span):
+                continue
+            result = [hit for hit in result if not set(range(hit[0], hit[0] + hit[1])) & span]
+        result.append((a, size, score))
+        occupied |= span
+    return sorted(result)
