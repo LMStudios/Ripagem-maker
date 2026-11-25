@@ -1,5 +1,9 @@
 # Notas de versão
 
+## 3.15.6
+
+- Comparação de quadros da detecção visual usa menos memória temporária e processamento, mantendo a leitura do OCR na resolução original da análise.
+
 ## 3.15.5
 
 - Detecção visual no Windows usa um processo de OCR por vez e limita o paralelismo interno da leitura e das miniaturas.

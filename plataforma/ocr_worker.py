@@ -32,9 +32,12 @@ def say(kind, value):
 
 
 def tiny(rgb):
-    gray = rgb.mean(axis=2)
-    h, w = gray.shape
-    return gray[:h - h % 18, :w - w % 32].reshape(18, (h - h % 18) // 18, 32, (w - w % 32) // 32).mean(axis=(1, 3))
+    height, width = rgb.shape[:2]
+    block_h, block_w = height // 18, width // 32
+    # Sum byte pixels by block before converting to floating-point averages.
+    blocks = rgb[:18 * block_h, :32 * block_w].reshape(18, block_h, 32, block_w * 3)
+    sums = blocks.sum(axis=3, dtype=np.uint32).sum(axis=1, dtype=np.uint32)
+    return sums.astype(np.float32) / (block_h * block_w * 3)
 
 
 def frames(args, start, duration=None, rate=RATE):
@@ -77,7 +80,7 @@ def unit(engine, args, start, target):
     previous = last_tiny = pending_cut = last_read = last_ocr = last_detail = None
     with partial.open('w', encoding='utf-8') as fp:
         for t, rgb in frames(args, start):
-            small = tiny(rgb.astype(np.float32))
+            small = tiny(rgb)
             delta = np.abs(small - previous) if previous is not None else None
             change = float(delta.mean()) if delta is not None else 0.0
             local_change = delta is not None and change < CUT and float(np.percentile(delta, 99)) >= 12 and float((delta > 8).mean()) <= .15
@@ -237,7 +240,7 @@ def appearance_unit(reference, args, start, target):
     last_small = last_t = None
     with partial.open('w', encoding='utf-8') as fp:
         for t, rgb in frames(args, start, rate=APPEARANCE_RATE):
-            small = tiny(rgb.astype(np.float32))
+            small = tiny(rgb)
             # Reaproveita só quadros quase idênticos e próximos: um pote pequeno que sai muda pouco a média.
             if last_small is not None and t - last_t < 1.0:
                 difference = np.abs(small - last_small)
